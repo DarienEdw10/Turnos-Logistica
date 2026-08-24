@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="TurnosLogistica.Api/TurnosLogistica.Api.csproj" />
+  <Project Path="TurnosLogistica.Domain/TurnosLogistica.Domain.csproj" />
+  <Project Path="TurnosLogistica.MVC/TurnosLogistica.MVC.csproj" />
+  <Project Path="TurnosLogistica.Tests/TurnosLogistica.Tests.csproj" />
+</Solution>

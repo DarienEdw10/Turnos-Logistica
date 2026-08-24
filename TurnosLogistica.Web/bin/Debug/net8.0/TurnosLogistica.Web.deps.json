@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "TurnosLogistica.Web/1.0.0": {
+        "dependencies": {
+          "TurnosLogistica.Domain": "1.0.0"
+        },
+        "runtime": {
+          "TurnosLogistica.Web.dll": {}
+        }
+      },
+      "TurnosLogistica.Domain/1.0.0": {
+        "runtime": {
+          "TurnosLogistica.Domain.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "TurnosLogistica.Web/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "TurnosLogistica.Domain/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

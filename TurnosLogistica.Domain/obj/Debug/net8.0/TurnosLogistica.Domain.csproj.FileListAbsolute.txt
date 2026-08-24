@@ -1,0 +1,11 @@
+C:\Users\darijim1\Documents\Turnos Logistica\TurnosLogistica.Domain\bin\Debug\net8.0\TurnosLogistica.Domain.deps.json
+C:\Users\darijim1\Documents\Turnos Logistica\TurnosLogistica.Domain\bin\Debug\net8.0\TurnosLogistica.Domain.dll
+C:\Users\darijim1\Documents\Turnos Logistica\TurnosLogistica.Domain\bin\Debug\net8.0\TurnosLogistica.Domain.pdb
+C:\Users\darijim1\Documents\Turnos Logistica\TurnosLogistica.Domain\obj\Debug\net8.0\TurnosLogistica.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\darijim1\Documents\Turnos Logistica\TurnosLogistica.Domain\obj\Debug\net8.0\TurnosLogistica.Domain.AssemblyInfoInputs.cache
+C:\Users\darijim1\Documents\Turnos Logistica\TurnosLogistica.Domain\obj\Debug\net8.0\TurnosLogistica.Domain.AssemblyInfo.cs
+C:\Users\darijim1\Documents\Turnos Logistica\TurnosLogistica.Domain\obj\Debug\net8.0\TurnosLogistica.Domain.csproj.CoreCompileInputs.cache
+C:\Users\darijim1\Documents\Turnos Logistica\TurnosLogistica.Domain\obj\Debug\net8.0\TurnosLogistica.Domain.dll
+C:\Users\darijim1\Documents\Turnos Logistica\TurnosLogistica.Domain\obj\Debug\net8.0\refint\TurnosLogistica.Domain.dll
+C:\Users\darijim1\Documents\Turnos Logistica\TurnosLogistica.Domain\obj\Debug\net8.0\TurnosLogistica.Domain.pdb
+C:\Users\darijim1\Documents\Turnos Logistica\TurnosLogistica.Domain\obj\Debug\net8.0\ref\TurnosLogistica.Domain.dll
