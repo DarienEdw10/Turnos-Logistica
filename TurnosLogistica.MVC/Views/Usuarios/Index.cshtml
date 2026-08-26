@@ -1,0 +1,54 @@
+@{
+    ViewData["Title"] = "Usuarios y Roles";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Usuarios y Roles</div>
+        <div class="page-subtitle">Gestión de acceso al sistema por rol</div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="openModal()">+ Agregar Usuario</button>
+</div>
+
+<div class="notice notice-warn">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;margin-top:1px"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+    <span><strong>Rol Sistemas:</strong> Solo modifica los roles de administrador. No tiene acceso a funciones operativas de producción.</span>
+</div>
+
+<div class="card" style="padding:0">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Nombre Completo</th>
+                    <th>Planta</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>jsanchez</strong></td>
+                    <td>Javier Sánchez Ruiz</td>
+                    <td>Global</td>
+                    <td><span style="background:#ede9fe;color:#7c3aed;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">Sistemas</span></td>
+                    <td><span class="badge badge-activo">Activo</span></td>
+                    <td><button class="btn btn-secondary btn-sm" onclick="openModal()">Editar rol</button></td>
+                </tr>
+                <tr>
+                    <td><strong>rgarcia</strong></td>
+                    <td>Roberto García Mendoza</td>
+                    <td>Planta 1</td>
+                    <td><span class="badge" style="background:var(--accent-light);color:var(--accent)">Adm. Jefe Log.</span></td>
+                    <td><span class="badge badge-activo">Activo</span></td>
+                    <td>
+                        <button class="btn btn-secondary btn-sm" onclick="openModal()">Editar</button>
+                        <button class="btn btn-danger btn-sm" onclick="openModal()">Deshabilitar</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

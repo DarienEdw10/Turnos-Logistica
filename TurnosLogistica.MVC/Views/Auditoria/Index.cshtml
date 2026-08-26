@@ -1,0 +1,51 @@
+@{
+    ViewData["Title"] = "Historial / Auditoría";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Historial / Auditoría</div>
+        <div class="page-subtitle">Registro inmutable de todas las acciones del sistema</div>
+    </div>
+    <button class="btn btn-secondary btn-sm">Exportar CSV</button>
+</div>
+
+<div class="notice notice-warn">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;margin-top:1px"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+    <span><strong>Solo lectura:</strong> No se permite editar ni eliminar registros de auditoría. Las consultas están limitadas a un rango máximo de 365 días.</span>
+</div>
+
+<div class="card" style="padding:0">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha / Hora</th>
+                    <th>Usuario</th>
+                    <th>Rol</th>
+                    <th>Acción</th>
+                    <th>Agenda (qué cambió)</th>
+                    <th>Razón</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>17/08/2026 09:32</td>
+                    <td><strong>rgarcia</strong></td>
+                    <td>Adm. Jefe</td>
+                    <td><span class="badge badge-encurso">Modificación</span></td>
+                    <td>PRY-CAMRY-25 / L.A-1 / C-101 / T2 / 17-ago → 22-ago</td>
+                    <td>Ajuste por mantenimiento preventivo programado.</td>
+                </tr>
+                <tr>
+                    <td>17/08/2026 07:15</td>
+                    <td><strong>lgutierrez</strong></td>
+                    <td>Personal</td>
+                    <td><span class="badge badge-programado">Alta</span></td>
+                    <td>PRY-TUNDRA-X / L.A-2 / C-104 / T3 / 17-ago / 31082759</td>
+                    <td>Nueva programación semanal conforme a plan maestro.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

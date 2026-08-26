@@ -1,0 +1,62 @@
+@{
+    ViewData["Title"] = "Gestión de Turnos";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Gestión de Turnos</div>
+        <div class="page-subtitle">Configuración de turnos y duración estimada</div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="openModal()">+ Agregar Turno</button>
+</div>
+
+<div class="card" style="padding:0">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Clave</th>
+                    <th>Nombre</th>
+                    <th>Hora Inicio</th>
+                    <th>Hora Fin</th>
+                    <th>Factor / Tiempo</th>
+                    <th>Color</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><span class="badge badge-t1">T1</span></td>
+                    <td><strong>Matutino</strong></td>
+                    <td>06:00</td>
+                    <td>15:36</td>
+                    <td>8.0 hrs</td>
+                    <td><div style="width:24px;height:24px;background:var(--t1);border-radius:4px"></div></td>
+                    <td><span class="badge badge-activo">Activo</span></td>
+                    <td><button class="btn btn-secondary btn-sm" onclick="openModal()">Editar</button></td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-t2">T2</span></td>
+                    <td><strong>Vespertino</strong></td>
+                    <td>14:00</td>
+                    <td>21:30</td>
+                    <td>7.5 hrs</td>
+                    <td><div style="width:24px;height:24px;background:var(--t2);border-radius:4px"></div></td>
+                    <td><span class="badge badge-activo">Activo</span></td>
+                    <td><button class="btn btn-secondary btn-sm" onclick="openModal()">Editar</button></td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-t3">T3</span></td>
+                    <td><strong>Nocturno</strong></td>
+                    <td>21:30</td>
+                    <td>06:00 (+1)</td>
+                    <td>8.0 hrs</td>
+                    <td><div style="width:24px;height:24px;background:var(--t3);border-radius:4px"></div></td>
+                    <td><span class="badge badge-activo">Activo</span></td>
+                    <td><button class="btn btn-secondary btn-sm" onclick="openModal()">Editar</button></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

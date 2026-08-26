@@ -36,3 +36,4 @@ C:\Users\darijim1\Documents\Turnos Logistica\TurnosLogistica.Api\obj\Debug\net8.
 C:\Users\darijim1\Documents\Turnos Logistica\TurnosLogistica.Api\obj\Debug\net8.0\TurnosLogistica.Api.pdb
 C:\Users\darijim1\Documents\Turnos Logistica\TurnosLogistica.Api\obj\Debug\net8.0\TurnosLogistica.Api.genruntimeconfig.cache
 C:\Users\darijim1\Documents\Turnos Logistica\TurnosLogistica.Api\obj\Debug\net8.0\ref\TurnosLogistica.Api.dll
+C:\Users\darijim1\Documents\Turnos Logistica\TurnosLogistica.Api\obj\Debug\net8.0\TurnosLogistica.Api.sourcelink.json

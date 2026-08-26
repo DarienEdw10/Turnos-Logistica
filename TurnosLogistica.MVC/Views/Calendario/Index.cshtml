@@ -1,0 +1,118 @@
+@{
+    ViewData["Title"] = "Calendario de Producción";
+    string agrupacion = ViewBag.Agrupacion ?? "proyecto";
+    string granularidad = ViewBag.Granularidad ?? "mensual";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Calendario de Producción</div>
+        <div class="page-subtitle">Vista @granularidad — Planta 1 / Agosto 2026</div>
+    </div>
+    <a class="btn btn-primary" asp-controller="Programacion" asp-action="Index">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        Nueva Programación
+    </a>
+</div>
+
+<!-- Agrupación y granularidad -->
+<div class="card" style="padding:16px 20px">
+    <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-end">
+        <div>
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px">Agrupación</div>
+            <div class="segmented">
+                <a class="seg-btn @(agrupacion == "proyecto" ? "active" : "")" href="?agrupacion=proyecto&granularidad=@granularidad">Proyecto</a>
+                <a class="seg-btn @(agrupacion == "linea" ? "active" : "")" href="?agrupacion=linea&granularidad=@granularidad">Línea (grupo)</a>
+                <a class="seg-btn @(agrupacion == "celda" ? "active" : "")" href="?agrupacion=celda&granularidad=@granularidad">Celda</a>
+                <a class="seg-btn @(agrupacion == "parte" ? "active" : "")" href="?agrupacion=parte&granularidad=@granularidad">Número de parte</a>
+            </div>
+        </div>
+        <div>
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px">Granularidad</div>
+            <div class="segmented">
+                <a class="seg-btn @(granularidad == "mensual" ? "active" : "")" href="?agrupacion=@agrupacion&granularidad=mensual">Mensual</a>
+                <a class="seg-btn @(granularidad == "semanal" ? "active" : "")" href="?agrupacion=@agrupacion&granularidad=semanal">Semanal</a>
+                <a class="seg-btn @(granularidad == "diario" ? "active" : "")" href="?agrupacion=@agrupacion&granularidad=diario">Diario</a>
+            </div>
+        </div>
+    </div>
+    <div class="notice notice-muted" style="margin-top:14px;margin-bottom:0">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;margin-top:1px"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+        <span><strong>Regla de densidad:</strong> Por Proyecto → mensual (no se satura). Por Línea → semanal. Por Número de parte → diario.</span>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="filter-bar">
+    <div class="filter-group">
+        <label>Línea</label>
+        <select><option>Todas</option><option>Línea A-1</option><option>Línea A-2</option><option>Línea B-1</option></select>
+    </div>
+    <div class="filter-group">
+        <label>Celda</label>
+        <select><option>Todas</option><option>C-101</option><option>C-102</option><option>C-201</option></select>
+    </div>
+    <div class="filter-group">
+        <label>Turno</label>
+        <select><option>Todos</option><option>T1 — Matutino</option><option>T2 — Vespertino</option><option>T3 — Nocturno</option></select>
+    </div>
+    <button class="btn btn-primary btn-sm">Aplicar</button>
+</div>
+
+<!-- Leyenda de turnos -->
+<div class="card" style="padding:12px 20px">
+    <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+        <div class="legend">
+            <div class="legend-item"><div class="legend-dot" style="background:var(--t1);"></div><span>T1 — Matutino (06:00–15:36)</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--t2);"></div><span>T2 — Vespertino (14:00–21:30)</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#475569;"></div><span>T3 — Nocturno (21:30–06:00)</span></div>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:10px;flex-wrap:wrap">
+            <span class="badge badge-programado">Programado</span>
+            <span class="badge badge-encurso">En curso</span>
+            <span class="badge badge-terminado">Terminado</span>
+            <span class="badge badge-cancelado">Cancelado</span>
+        </div>
+    </div>
+</div>
+
+<!-- Grid Calendario -->
+<div class="card" style="padding:12px">
+    <div class="cal-header">
+        <div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div><div>Dom</div>
+    </div>
+    <div class="cal-grid">
+        <div class="cal-cell other-month"><div class="cal-day-num">27</div></div>
+        <div class="cal-cell other-month"><div class="cal-day-num">28</div></div>
+        <div class="cal-cell other-month"><div class="cal-day-num">29</div></div>
+        <div class="cal-cell other-month"><div class="cal-day-num">30</div></div>
+        <div class="cal-cell other-month"><div class="cal-day-num">31</div></div>
+        <div class="cal-cell"><div class="cal-day-num">1</div></div>
+        <div class="cal-cell"><div class="cal-day-num">2</div></div>
+
+        <!-- Semana con los 3 turnos activos en Celda C-101 -->
+        <div class="cal-cell"><div class="cal-day-num">3</div>
+            <div class="cal-event cal-event-t1" onclick="openModal()">
+                <div class="cal-event-title">PRY-CAMRY-25</div>
+                <div class="cal-event-meta">L.A-1 / C-101 / 84350742</div>
+                <div style="margin-top:2px;display:flex;gap:3px"><span class="badge badge-t1" style="font-size:9px">T1</span><span class="badge badge-programado" style="font-size:9px">8h</span></div>
+            </div>
+            <div class="cal-event cal-event-t2" onclick="openModal()">
+                <div class="cal-event-title">PRY-CAMRY-25</div>
+                <div class="cal-event-meta">L.A-1 / C-101</div>
+                <div style="margin-top:2px;display:flex;gap:3px"><span class="badge badge-t2" style="font-size:9px">T2</span><span class="badge badge-programado" style="font-size:9px">7.5h</span></div>
+            </div>
+            <div class="cal-event cal-event-t3" onclick="openModal()">
+                <div class="cal-event-title">PRY-CAMRY-25</div>
+                <div class="cal-event-meta">L.A-1 / C-101</div>
+                <div style="margin-top:2px;display:flex;gap:3px"><span class="badge badge-t3" style="font-size:9px">T3</span><span class="badge badge-programado" style="font-size:9px">8h</span></div>
+            </div>
+        </div>
+        <div class="cal-cell"><div class="cal-day-num">4</div></div>
+        <div class="cal-cell"><div class="cal-day-num">5</div></div>
+        <div class="cal-cell"><div class="cal-day-num">6</div></div>
+        <div class="cal-cell"><div class="cal-day-num">7</div></div>
+        <div class="cal-cell other-month"><div class="cal-day-num">8</div></div>
+        <div class="cal-cell other-month"><div class="cal-day-num">9</div></div>
+    </div>
+</div>

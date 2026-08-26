@@ -1,0 +1,60 @@
+@{
+    ViewData["Title"] = "Maestro de Partes";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Maestro de Partes</div>
+        <div class="page-subtitle">Catálogo de números de parte por celda y estación</div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="openModal()">+ Agregar Parte</button>
+</div>
+
+<div class="notice notice-warn">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;margin-top:1px"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+    <span><strong>SAP:</strong> Los inventarios (AT30, AT90, etc.) y Ventanas se consultan en SAP. La Ayuda Visual almacena el archivo técnico para consulta operativa.</span>
+</div>
+
+<div class="card" style="padding:0">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>SAP Part #</th>
+                    <th>Descripción</th>
+                    <th>Final Assembly</th>
+                    <th>OA</th>
+                    <th>JPH</th>
+                    <th>Línea</th>
+                    <th>Celda</th>
+                    <th>Ayuda Visual</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>84350742</strong></td>
+                    <td>Bracket Asm Front RH</td>
+                    <td>FA-CAMRY-0471</td>
+                    <td>OA-2026-001</td>
+                    <td>58</td>
+                    <td>Línea A-1</td>
+                    <td>C-101</td>
+                    <td><span class="chip chip-upload">Subir</span></td>
+                    <td><button class="btn btn-secondary btn-sm" onclick="openModal()">Editar</button></td>
+                </tr>
+                <tr>
+                    <td><strong>84350743</strong></td>
+                    <td>Bracket Asm Rear LH</td>
+                    <td>FA-CAMRY-0472</td>
+                    <td>OA-2026-001</td>
+                    <td>58</td>
+                    <td>Línea A-1</td>
+                    <td>C-101</td>
+                    <td><span class="chip chip-upload" style="border-color:var(--success);color:var(--success);background:var(--success-bg)">Cargada</span></td>
+                    <td><button class="btn btn-secondary btn-sm" onclick="openModal()">Editar</button></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

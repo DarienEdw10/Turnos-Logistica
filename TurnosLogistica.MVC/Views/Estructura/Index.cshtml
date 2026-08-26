@@ -1,0 +1,75 @@
+@{
+    ViewData["Title"] = "Gestión de Estructura";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Gestión de Estructura</div>
+        <div class="page-subtitle">Jerarquía: Planta → Proyecto → Línea → Celda → Estación</div>
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
+    <div class="card">
+        <div class="card-title" style="justify-content:space-between">
+            <span>Árbol de Estructura</span>
+            <button class="btn btn-primary btn-sm" onclick="openModal()">+ Nodo</button>
+        </div>
+        <ul class="tree">
+            <li class="tree-node">
+                <div class="tree-label" onclick="toggleTree('p1')">
+                    <div class="tree-toggle" id="toggle-p1">&#9660;</div>
+                    <span class="level-planta">Planta 1 — Monterrey</span>
+                </div>
+                <ul class="tree-children" id="children-p1">
+                    <li class="tree-node">
+                        <div class="tree-label" onclick="toggleTree('p1-pry1')">
+                            <div class="tree-toggle" id="toggle-p1-pry1">&#9660;</div>
+                            <span class="level-proyecto">PRY-CAMRY-25</span>
+                        </div>
+                        <ul class="tree-children" id="children-p1-pry1">
+                            <li class="tree-node">
+                                <div class="tree-label" onclick="toggleTree('la1')">
+                                    <div class="tree-toggle" id="toggle-la1">&#9660;</div>
+                                    <span class="level-linea">Línea A-1</span>
+                                </div>
+                                <ul class="tree-children" id="children-la1">
+                                    <li class="tree-node">
+                                        <div class="tree-label" onclick="toggleTree('c101')">
+                                            <div class="tree-toggle" id="toggle-c101">&#9660;</div>
+                                            <span class="level-celda">C-101 — Ensamble Frontal</span>
+                                        </div>
+                                        <ul class="tree-children" id="children-c101">
+                                            <li class="tree-node"><div class="tree-label"><span class="level-estacion">EST-01 Carga</span></div></li>
+                                            <li class="tree-node"><div class="tree-label"><span class="level-estacion">EST-02 Ensamble</span></div></li>
+                                            <li class="tree-node"><div class="tree-label"><span class="level-estacion">EST-03 Torque</span></div></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Celda → Números de Parte</div>
+        <div class="form-group" style="margin-bottom:12px">
+            <label>Celda seleccionada</label>
+            <select>
+                <option>C-101 — Ensamble Frontal (Línea A-1)</option>
+                <option>C-102 — Ensamble Lateral</option>
+            </select>
+        </div>
+        <div class="multi-select-mock" style="min-height:120px">
+            <div class="ms-tag">84350742 — Bracket Asm Front<button>x</button></div>
+            <div class="ms-tag">84350743 — Bracket Asm Rear<button>x</button></div>
+            <div class="ms-tag">13579246 — Main Harness Asm<button>x</button></div>
+        </div>
+        <div class="form-actions">
+            <button class="btn btn-primary btn-sm" onclick="openModal()">Guardar asignación</button>
+        </div>
+    </div>
+</div>
