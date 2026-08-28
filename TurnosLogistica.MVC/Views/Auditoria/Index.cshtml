@@ -1,50 +1,102 @@
+@model TurnosLogistica.MVC.Models.AuditoriaViewModel
 @{
     ViewData["Title"] = "Historial / Auditoría";
+    var fInicioStr = (Model?.FechaInicio ?? DateTime.Today.AddDays(-30)).ToString("yyyy-MM-dd");
+    var fFinStr = (Model?.FechaFin ?? DateTime.Today).ToString("yyyy-MM-dd");
 }
 
-<div class="page-header">
+<!-- ENCABEZADO -->
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
     <div>
-        <div class="page-title">Historial / Auditoría</div>
-        <div class="page-subtitle">Registro inmutable de todas las acciones del sistema</div>
+        <div class="page-title" style="font-size:20px; font-weight:700;">Historial / Auditoría</div>
+        <div class="page-subtitle" style="color:var(--text-muted); font-size:13px;">Registro inmutable de todas las acciones del sistema</div>
     </div>
-    <button class="btn btn-secondary btn-sm">Exportar CSV</button>
+    <a asp-action="ExportarCsv" 
+       asp-route-fechaInicio="@fInicioStr" 
+       asp-route-fechaFin="@fFinStr" 
+       class="btn btn-secondary" 
+       style="padding:6px 14px; font-size:13px; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+        Exportar CSV
+    </a>
 </div>
 
-<div class="notice notice-warn">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;margin-top:1px"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-    <span><strong>Solo lectura:</strong> No se permite editar ni eliminar registros de auditoría. Las consultas están limitadas a un rango máximo de 365 días.</span>
+<!-- AVISO SOLO LECTURA -->
+<div class="notice notice-warn" style="display:flex; align-items:flex-start; gap:10px; padding:12px 16px; border-radius:8px; margin-bottom:16px; background:#fffbeb; border:1px solid #fcd34d; font-size:13px; color:#92400e;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="#d97706" style="flex-shrink:0; margin-top:1px;">
+        <path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
+    </svg>
+    <div>
+        <strong>Solo lectura:</strong> No se permite editar ni eliminar registros de auditoría. Las consultas están limitadas a un rango máximo de 365 días.
+    </div>
 </div>
 
-<div class="card" style="padding:0">
+@if (!string.IsNullOrEmpty(Model?.ErrorMensaje))
+{
+    <div style="background:#fee2e2; border:1px solid #f87171; color:#991b1b; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:13px;">
+        <strong>Error:</strong> @Model.ErrorMensaje
+    </div>
+}
+
+<!-- FILTRO DE FECHAS -->
+<form method="get" asp-action="Index" class="card" style="padding:14px 20px; margin-bottom:16px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+    <div style="display:flex; align-items:center; gap:8px;">
+        <label style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Desde:</label>
+        <input type="date" name="fechaInicio" value="@fInicioStr" class="form-control" style="padding:4px 8px; font-size:13px;" />
+    </div>
+
+    <div style="display:flex; align-items:center; gap:8px;">
+        <label style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Hasta:</label>
+        <input type="date" name="fechaFin" value="@fFinStr" class="form-control" style="padding:4px 8px; font-size:13px;" />
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-sm" style="padding:6px 14px;">Consultar</button>
+</form>
+
+<!-- TABLA DE HISTORIAL -->
+<div class="card" style="padding:0; overflow:hidden;">
     <div class="table-wrap">
-        <table>
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
             <thead>
-                <tr>
-                    <th>Fecha / Hora</th>
-                    <th>Usuario</th>
-                    <th>Rol</th>
-                    <th>Acción</th>
-                    <th>Agenda (qué cambió)</th>
-                    <th>Razón</th>
+                <tr style="border-bottom:1px solid var(--border); background:var(--bg);">
+                    <th style="padding:12px 16px; text-align:left; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">FECHA / HORA</th>
+                    <th style="padding:12px 16px; text-align:left; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">USUARIO</th>
+                    <th style="padding:12px 16px; text-align:left; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">ROL</th>
+                    <th style="padding:12px 16px; text-align:center; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">ACCIÓN</th>
+                    <th style="padding:12px 16px; text-align:left; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">AGENDA (QUÉ CAMBIÓ)</th>
+                    <th style="padding:12px 16px; text-align:left; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">RAZÓN</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>17/08/2026 09:32</td>
-                    <td><strong>rgarcia</strong></td>
-                    <td>Adm. Jefe</td>
-                    <td><span class="badge badge-encurso">Modificación</span></td>
-                    <td>PRY-CAMRY-25 / L.A-1 / C-101 / T2 / 17-ago → 22-ago</td>
-                    <td>Ajuste por mantenimiento preventivo programado.</td>
-                </tr>
-                <tr>
-                    <td>17/08/2026 07:15</td>
-                    <td><strong>lgutierrez</strong></td>
-                    <td>Personal</td>
-                    <td><span class="badge badge-programado">Alta</span></td>
-                    <td>PRY-TUNDRA-X / L.A-2 / C-104 / T3 / 17-ago / 31082759</td>
-                    <td>Nueva programación semanal conforme a plan maestro.</td>
-                </tr>
+                @if (Model?.Registros != null && Model.Registros.Any())
+                {
+                    foreach (var r in Model.Registros)
+                    {
+                        <tr style="border-bottom:1px solid var(--border);">
+                            <td style="padding:12px 16px; font-family:monospace; font-size:12px;">
+                                <div>@r.FechaAccion.ToString("dd/MM/yyyy")</div>
+                                <div style="color:var(--text-muted); font-size:11px;">@r.FechaAccion.ToString("HH:mm")</div>
+                            </td>
+                            <td style="padding:12px 16px; font-weight:700; color:var(--text);">@r.UsuarioResponsable</td>
+                            <td style="padding:12px 16px; color:var(--text-muted);">@r.RolUsuario</td>
+                            <td style="padding:12px 16px; text-align:center;">
+                                <span class="badge badge-@r.AccionBadgeClase" style="font-size:11px; padding:3px 10px;">
+                                    @r.Accion
+                                </span>
+                            </td>
+                            <td style="padding:12px 16px; font-weight:600;">@r.AgendaDetalle</td>
+                            <td style="padding:12px 16px; color:var(--text-muted);">@r.Razon</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" style="padding:24px; text-align:center; color:var(--text-muted);">
+                            No hay registros de auditoría para el período y planta seleccionados.
+                        </td>
+                    </tr>
+                }
             </tbody>
         </table>
     </div>

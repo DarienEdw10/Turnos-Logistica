@@ -1,16 +1,33 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace TurnosLogistica.MVC.Models;
 
 public class ProgramacionFormViewModel
 {
-    public int PlantaId { get; set; } = 1;
+    [Required]
     public int ProyectoId { get; set; }
+
+    [Required]
     public int LineaId { get; set; }
+
+    [Required]
     public int CeldaId { get; set; }
-    public int EstacionId { get; set; }
+
+    public int? EstacionId { get; set; }
+
+    [Required]
+    public int NumeroParteId { get; set; }
+
+    [Required]
     public DateTime FechaProduccion { get; set; } = DateTime.Today;
-    public List<string> SapPartNumbersSeleccionados { get; set; } = new();
-    public string Turno { get; set; } = "t1"; // t1, t2, t3
+
+    [Required]
+    public int TurnoId { get; set; } = 1; // 1 = T1, 2 = T2, 3 = T3
+
     public double TiempoEstimadoHoras { get; set; } = 8.0;
-    public string Estado { get; set; } = "Programado";
-    public string RazonObligatoria { get; set; } = "";
+
+    [Required(ErrorMessage = "La razón es obligatoria")]
+    public string RazonObligatoria { get; set; } = string.Empty;
+
+    public string Estado { get; set; } = "pendiente";
 }

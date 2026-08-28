@@ -1,18 +1,17 @@
 namespace TurnosLogistica.MVC.Models;
 
-public class ParteViewModel
+public class ParteItemDto
 {
     public int Id { get; set; }
-    public string SapPartNumber { get; set; } = "";
-    public string NoDeParte { get; set; } = "";
-    public string Descripcion { get; set; } = "";
+    public string SapPartNumber { get; set; } = string.Empty;
+    public string NoDeParte { get; set; } = string.Empty;
+    public string Descripcion { get; set; } = string.Empty;
     public string? FinalAssembly { get; set; }
     public string? Familia { get; set; }
     public decimal OA { get; set; }
     public int JPH { get; set; }
-    public string LineaNombre { get; set; } = "";
-    public string CeldaNombre { get; set; } = "";
-    public string? EstacionNombre { get; set; }
-    public string? ImagenAyudaVisualUrl { get; set; }
-    public bool Activo { get; set; } = true;
+    public string LineaNombre { get; set; } = string.Empty;
+    public string CeldaCodigo { get; set; } = string.Empty;
+    public string? ImagenAyudaVisual { get; set; }
+    public bool Activo { get; set; }
 }

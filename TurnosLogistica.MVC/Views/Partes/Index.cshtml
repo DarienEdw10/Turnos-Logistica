@@ -1,60 +1,260 @@
+@model List<TurnosLogistica.MVC.Models.ParteItemDto>
 @{
     ViewData["Title"] = "Maestro de Partes";
+    var lineas = ViewBag.Lineas as IEnumerable<dynamic> ?? new List<dynamic>();
 }
 
-<div class="page-header">
+<!-- ENCABEZADO -->
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
     <div>
-        <div class="page-title">Maestro de Partes</div>
-        <div class="page-subtitle">Catálogo de números de parte por celda y estación</div>
+        <div class="page-title" style="font-size:20px; font-weight:700;">Maestro de Partes</div>
+        <div class="page-subtitle" style="color:var(--text-muted); font-size:13px;">Catálogo de números de parte por
+            celda y estación</div>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="abrirModalParte(0)"
+                style="padding:6px 14px; font-size:13px; font-weight:600;">
+            + Agregar Parte
+        </button>
     </div>
-    <button class="btn btn-primary btn-sm" onclick="openModal()">+ Agregar Parte</button>
-</div>
 
-<div class="notice notice-warn">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;margin-top:1px"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
-    <span><strong>SAP:</strong> Los inventarios (AT30, AT90, etc.) y Ventanas se consultan en SAP. La Ayuda Visual almacena el archivo técnico para consulta operativa.</span>
-</div>
-
-<div class="card" style="padding:0">
-    <div class="table-wrap">
-        <table>
-            <thead>
-                <tr>
-                    <th>SAP Part #</th>
-                    <th>Descripción</th>
-                    <th>Final Assembly</th>
-                    <th>OA</th>
-                    <th>JPH</th>
-                    <th>Línea</th>
-                    <th>Celda</th>
-                    <th>Ayuda Visual</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><strong>84350742</strong></td>
-                    <td>Bracket Asm Front RH</td>
-                    <td>FA-CAMRY-0471</td>
-                    <td>OA-2026-001</td>
-                    <td>58</td>
-                    <td>Línea A-1</td>
-                    <td>C-101</td>
-                    <td><span class="chip chip-upload">Subir</span></td>
-                    <td><button class="btn btn-secondary btn-sm" onclick="openModal()">Editar</button></td>
-                </tr>
-                <tr>
-                    <td><strong>84350743</strong></td>
-                    <td>Bracket Asm Rear LH</td>
-                    <td>FA-CAMRY-0472</td>
-                    <td>OA-2026-001</td>
-                    <td>58</td>
-                    <td>Línea A-1</td>
-                    <td>C-101</td>
-                    <td><span class="chip chip-upload" style="border-color:var(--success);color:var(--success);background:var(--success-bg)">Cargada</span></td>
-                    <td><button class="btn btn-secondary btn-sm" onclick="openModal()">Editar</button></td>
-                </tr>
-            </tbody>
-        </table>
+    <!-- AVISO SAP -->
+    <div class="notice notice-warn"
+         style="display:flex; align-items:flex-start; gap:10px; padding:12px 16px; border-radius:8px; margin-bottom:16px; background:#fffbeb; border:1px solid #fcd34d; font-size:13px; color:#92400e;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#d97706" style="flex-shrink:0; margin-top:1px;">
+            <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+        </svg>
+        <div>
+            <strong>SAP:</strong> Los inventarios (AT30, AT90, etc.) y Ventanas se consultan en SAP. La Ayuda Visual
+            almacena el archivo técnico para consulta operativa.
+        </div>
     </div>
-</div>
+
+    <!-- TABLA DE PARTES -->
+    <div class="card" style="padding:0; overflow:hidden;">
+        <div class="table-wrap">
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--border); background:var(--bg);">
+                        <th
+                            style="padding:12px 16px; text-align:left; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">
+                            SAP PART #</th>
+                            <th
+                                style="padding:12px 16px; text-align:left; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">
+                                DESCRIPCIÓN</th>
+                                <th
+                                    style="padding:12px 16px; text-align:left; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">
+                                    FINAL ASSEMBLY</th>
+                                    <th
+                                        style="padding:12px 16px; text-align:left; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">
+                                        OA</th>
+                                        <th
+                                            style="padding:12px 16px; text-align:left; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">
+                                            JPH</th>
+                                            <th
+                                                style="padding:12px 16px; text-align:left; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">
+                                                LÍNEA</th>
+                                                <th
+                                                    style="padding:12px 16px; text-align:left; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">
+                                                    CELDA</th>
+                                                    <th
+                                                        style="padding:12px 16px; text-align:center; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">
+                                                        AYUDA VISUAL</th>
+                                                        <th
+                                                            style="padding:12px 16px; text-align:center; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">
+                                                            ACCIONES</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @if (Model != null && Model.Any())
+                                                        {
+                                                            foreach (var p in Model)
+                                                            {
+                                                                <tr style="border-bottom:1px solid var(--border);">
+                                                                    <td style="padding:12px 16px; font-weight:700; color:var(--text);">@p.SapPartNumber</td>
+                                                                    <td style="padding:12px 16px;">@p.Descripcion</td>
+                                                                    <td style="padding:12px 16px;">@p.FinalAssembly</td>
+                                                                    <td style="padding:12px 16px;">@p.OA</td>
+                                                                    <td style="padding:12px 16px; font-weight:600;">@p.JPH</td>
+                                                                    <td style="padding:12px 16px;">@p.LineaNombre</td>
+                                                                    <td style="padding:12px 16px;">@p.CeldaCodigo</td>
+                                                                    <td style="padding:12px 16px; text-align:center;">
+                                                                        @if (!string.IsNullOrEmpty(p.ImagenAyudaVisual))
+                                                                        {
+                                                                            <span class="chip"
+                                                                                  style="border:1px dashed var(--success); color:var(--success); background:var(--success-bg); padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600;">
+                                                                                Cargada
+                                                                            </span>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <span class="chip chip-upload"
+                                                                                  style="border:1px dashed var(--accent); color:var(--accent); background:var(--accent-light); padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; cursor:pointer;">
+                                                                                Subir
+                                                                            </span>
+                                                                        }
+                                                                    </td>
+                                                                    <td style="padding:12px 16px; text-align:center;">
+                                                                        <button type="button" class="btn btn-secondary btn-sm" onclick="abrirModalParte(@p.Id)"
+                                                                                style="padding:4px 10px; font-size:12px;">Editar</button>
+                                                                    </td>
+                                                                </tr>
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            <tr>
+                                                                <td colspan="9" style="padding:24px; text-align:center; color:var(--text-muted);">
+                                                                    No hay números de parte registrados para esta planta.
+                                                                </td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+
+                                        <!-- MODAL FLOTANTE DE AGREGAR / EDITAR PARTE -->
+                                        <div id="modalParteOverlay"
+                                             style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:250; align-items:center; justify-content:center;">
+                                            <div
+                                                style="background:var(--surface); border-radius:12px; padding:24px; width:100%; max-width:620px; box-shadow:0 20px 60px rgba(0,0,0,0.25); max-height:90vh; overflow-y:auto;">
+
+                                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                                                    <h3 id="modalParteTitle" style="font-size:16px; font-weight:700; margin:0;">Agregar Número de Parte</h3>
+                                                    <button type="button" onclick="cerrarModalParte()"
+                                                            style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--text-muted);">&times;</button>
+                                                </div>
+
+                                                <form asp-controller="Partes" asp-action="Guardar" method="post">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" id="parteId" name="Id" value="0" />
+
+                                                    <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                                                        <div class="form-group">
+                                                            <label style="font-size:11px; font-weight:700; color:var(--text-muted);">SAP PART NUMBER *</label>
+                                                            <input type="text" id="parteSap" name="SapPartNumber" required />
+                                                        </div>
+                                                        <div class="form-group">
+                                                            <label style="font-size:11px; font-weight:700; color:var(--text-muted);">NO. DE PARTE INTERNO
+                                                                *</label>
+                                                                <input type="text" id="parteNo" name="NoDeParte" required />
+                                                            </div>
+                                                            <div class="form-group" style="grid-column:1 / -1;">
+                                                                <label style="font-size:11px; font-weight:700; color:var(--text-muted);">DESCRIPCIÓN *</label>
+                                                                <input type="text" id="parteDesc" name="Descripcion" required />
+                                                            </div>
+
+                                                            <div class="form-group">
+                                                                <label style="font-size:11px; font-weight:700; color:var(--text-muted);">LÍNEA *</label>
+                                                                <select id="parteLinea" name="LineaId" onchange="cargarCeldasParte(this.value)" required>
+                                                                    <option value="">-- Seleccionar --</option>
+                                                                    @foreach (var l in lineas)
+                                                                    {
+                                                                        <option value="@l.Id">@l.Nombre</option>
+                                                                    }
+                                                                </select>
+                                                            </div>
+
+                                                            <div class="form-group">
+                                                                <label style="font-size:11px; font-weight:700; color:var(--text-muted);">CELDA (WORKCENTER)
+                                                                    *</label>
+                                                                    <select id="parteCelda" name="CeldaId" required>
+                                                                        <option value="">-- Seleccione Línea Primero --</option>
+                                                                    </select>
+                                                                </div>
+
+                                                                <div class="form-group">
+                                                                    <label style="font-size:11px; font-weight:700; color:var(--text-muted);">FINAL ASSEMBLY</label>
+                                                                    <input type="text" id="parteFa" name="FinalAssembly" />
+                                                                </div>
+                                                                <div class="form-group">
+                                                                    <label style="font-size:11px; font-weight:700; color:var(--text-muted);">FAMILIA</label>
+                                                                    <input type="text" id="parteFam" name="Familia" />
+                                                                </div>
+
+                                                                <div class="form-group">
+                                                                    <label style="font-size:11px; font-weight:700; color:var(--text-muted);">OA (EFICIENCIA %)</label>
+                                                                    <input type="number" step="0.01" id="parteOa" name="OA" placeholder="Ej. 85" />
+                                                                </div>
+                                                                <div class="form-group">
+                                                                    <label style="font-size:11px; font-weight:700; color:var(--text-muted);">JPH (JOBS PER HOUR)
+                                                                        *</label>
+                                                                        <input type="number" id="parteJph" name="JPH" placeholder="Ej. 38" required />
+                                                                    </div>
+                                                                </div>
+
+                                                                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px;">
+                                                                    <button type="button" class="btn btn-secondary" onclick="cerrarModalParte()">Cancelar</button>
+                                                                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                                                                </div>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+
+                                                    @section Scripts {
+                                                        <script>
+                                                            function cerrarModalParte() {
+                                                                const m = document.getElementById('modalParteOverlay');
+                                                                if (m) m.style.display = 'none';
+                                                            }
+
+                                                            function cargarCeldasParte(lineaId, celdaSeleccionada = null) {
+                                                                const selCelda = document.getElementById('parteCelda');
+                                                                selCelda.innerHTML = '<option value="">Cargando celdas...</option>';
+
+                                                                if (!lineaId) {
+                                                                    selCelda.innerHTML = '<option value="">-- Seleccione Línea Primero --</option>';
+                                                                    return Promise.resolve();
+                                                                }
+
+                                                                return fetch(`/Partes/ObtenerCeldasPorLinea?lineaId=${lineaId}`)
+                                                                    .then(r => r.json())
+                                                                    .then(data => {
+                                                                        selCelda.innerHTML = '<option value="">-- Seleccione Celda --</option>';
+                                                                        data.forEach(item => {
+                                                                            const sel = (celdaSeleccionada && item.id == celdaSeleccionada) ? 'selected' : '';
+                                                                            selCelda.innerHTML += `<option value="${item.id}" ${sel}>${item.texto}</option>`;
+                                                                        });
+                                                                    });
+                                                            }
+
+                                                            function abrirModalParte(id) {
+                                                                const overlay = document.getElementById('modalParteOverlay');
+                                                                const title = document.getElementById('modalParteTitle');
+
+                                                                if (id === 0) {
+                                                                    title.innerText = 'Agregar Número de Parte';
+                                                                    document.getElementById('parteId').value = 0;
+                                                                    document.getElementById('parteSap').value = '';
+                                                                    document.getElementById('parteNo').value = '';
+                                                                    document.getElementById('parteDesc').value = '';
+                                                                    document.getElementById('parteLinea').value = '';
+                                                                    document.getElementById('parteCelda').innerHTML = '<option value="">-- Seleccione Línea Primero --</option>';
+                                                                    document.getElementById('parteFa').value = '';
+                                                                    document.getElementById('parteFam').value = '';
+                                                                    document.getElementById('parteOa').value = '';
+                                                                    document.getElementById('parteJph').value = '';
+                                                                    overlay.style.display = 'flex';
+                                                                } else {
+                                                                    title.innerText = 'Editar Número de Parte';
+                                                                    fetch(`/Partes/ObtenerParte?id=${id}`)
+                                                                        .then(r => r.json())
+                                                                        .then(data => {
+                                                                            document.getElementById('parteId').value = data.id;
+                                                                            document.getElementById('parteSap').value = data.sapPartNumber;
+                                                                            document.getElementById('parteNo').value = data.noDeParte;
+                                                                            document.getElementById('parteDesc').value = data.descripcion;
+                                                                            document.getElementById('parteLinea').value = data.lineaId;
+                                                                            document.getElementById('parteFa').value = data.finalAssembly || '';
+                                                                            document.getElementById('parteFam').value = data.familia || '';
+                                                                            document.getElementById('parteOa').value = data.oa;
+                                                                            document.getElementById('parteJph').value = data.jph;
+
+                                                                            cargarCeldasParte(data.lineaId, data.celdaId).then(() => {
+                                                                                overlay.style.display = 'flex';
+                                                                            });
+                                                                        });
+                                                                }
+                                                            }
+                                                        </script>
+                                                    }

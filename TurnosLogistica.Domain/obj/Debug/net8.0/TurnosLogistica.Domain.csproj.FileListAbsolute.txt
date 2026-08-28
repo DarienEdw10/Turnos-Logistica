@@ -10,3 +10,4 @@ C:\Users\darijim1\Documents\Turnos Logistica\TurnosLogistica.Domain\obj\Debug\ne
 C:\Users\darijim1\Documents\Turnos Logistica\TurnosLogistica.Domain\obj\Debug\net8.0\TurnosLogistica.Domain.pdb
 C:\Users\darijim1\Documents\Turnos Logistica\TurnosLogistica.Domain\obj\Debug\net8.0\ref\TurnosLogistica.Domain.dll
 C:\Users\darijim1\Documents\Turnos Logistica\TurnosLogistica.Domain\obj\Debug\net8.0\TurnosLogistica.Domain.sourcelink.json
+C:\Users\darijim1\Documents\Turnos Logistica\TurnosLogistica.Domain\obj\Debug\net8.0\TurnosLogistica.Domain.csproj.AssemblyReference.cache

@@ -1,3 +1,4 @@
+@model List<TurnosLogistica.MVC.Models.TurnoViewModel>
 @{
     ViewData["Title"] = "Gestión de Turnos";
 }
@@ -7,7 +8,7 @@
         <div class="page-title">Gestión de Turnos</div>
         <div class="page-subtitle">Configuración de turnos y duración estimada</div>
     </div>
-    <button class="btn btn-primary btn-sm" onclick="openModal()">+ Agregar Turno</button>
+    <button class="btn btn-primary btn-sm" onclick="abrirModalTurno(0)">+ Agregar Turno</button>
 </div>
 
 <div class="card" style="padding:0">
@@ -26,37 +27,126 @@
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td><span class="badge badge-t1">T1</span></td>
-                    <td><strong>Matutino</strong></td>
-                    <td>06:00</td>
-                    <td>15:36</td>
-                    <td>8.0 hrs</td>
-                    <td><div style="width:24px;height:24px;background:var(--t1);border-radius:4px"></div></td>
-                    <td><span class="badge badge-activo">Activo</span></td>
-                    <td><button class="btn btn-secondary btn-sm" onclick="openModal()">Editar</button></td>
-                </tr>
-                <tr>
-                    <td><span class="badge badge-t2">T2</span></td>
-                    <td><strong>Vespertino</strong></td>
-                    <td>14:00</td>
-                    <td>21:30</td>
-                    <td>7.5 hrs</td>
-                    <td><div style="width:24px;height:24px;background:var(--t2);border-radius:4px"></div></td>
-                    <td><span class="badge badge-activo">Activo</span></td>
-                    <td><button class="btn btn-secondary btn-sm" onclick="openModal()">Editar</button></td>
-                </tr>
-                <tr>
-                    <td><span class="badge badge-t3">T3</span></td>
-                    <td><strong>Nocturno</strong></td>
-                    <td>21:30</td>
-                    <td>06:00 (+1)</td>
-                    <td>8.0 hrs</td>
-                    <td><div style="width:24px;height:24px;background:var(--t3);border-radius:4px"></div></td>
-                    <td><span class="badge badge-activo">Activo</span></td>
-                    <td><button class="btn btn-secondary btn-sm" onclick="openModal()">Editar</button></td>
-                </tr>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var t in Model)
+                    {
+                        <tr>
+                            <td><span class="badge badge-@t.ClaseColor">@t.Clave</span></td>
+                            <td><strong>@t.Nombre</strong></td>
+                            <td>@t.HoraInicio.ToString(@"hh\:mm")</td>
+                            <td>
+                                @t.HoraFin.ToString(@"hh\:mm") @(t.HoraFin <= t.HoraInicio ? "(+1)" : "")
+                            </td>
+                            <td>@t.Horas hrs</td>
+                            <td>
+                                <div style="width:24px;height:24px;background:var(--@t.ClaseColor);border-radius:4px"></div>
+                            </td>
+                            <td>
+                                @if (t.Activo)
+                                {
+                                    <span class="badge badge-activo">Activo</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-inactivo">Inactivo</span>
+                                }
+                            </td>
+                            <td>
+                                <button class="btn btn-secondary btn-sm" onclick="abrirModalTurno(@t.Id)">Editar</button>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" style="padding:24px; text-align:center; color:var(--text-muted);">
+                            No hay turnos configurados para esta planta.
+                        </td>
+                    </tr>
+                }
             </tbody>
         </table>
     </div>
 </div>
+
+<!-- MODAL FLOTANTE: AGREGAR / EDITAR TURNO -->
+<div id="modalTurnoOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:250; align-items:center; justify-content:center;">
+    <div style="background:var(--surface); border-radius:12px; padding:24px; width:100%; max-width:460px; box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 id="modalTurnoTitle" style="font-size:16px; font-weight:700; margin:0;">Agregar Turno</h3>
+            <button type="button" onclick="cerrarModalTurno()" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--text-muted);">&times;</button>
+        </div>
+
+        <form asp-controller="Turnos" asp-action="Guardar" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="turnoId" name="id" value="0" />
+
+            <div class="form-group" style="margin-bottom:12px;">
+                <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">NOMBRE DEL TURNO *</label>
+                <input type="text" id="turnoNombre" name="nombre" placeholder="Ej. 1er T — Matutino" required />
+            </div>
+
+            <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+                <div class="form-group">
+                    <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">HORA INICIO *</label>
+                    <input type="time" id="turnoHoraInicio" name="horaInicio" required />
+                </div>
+                <div class="form-group">
+                    <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">HORA FIN *</label>
+                    <input type="time" id="turnoHoraFin" name="horaFin" required />
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:600;">
+                    <input type="checkbox" id="turnoActivo" name="activo" value="true" checked />
+                    Turno Activo
+                </label>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px;">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModalTurno()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function cerrarModalTurno() {
+            const m = document.getElementById('modalTurnoOverlay');
+            if (m) m.style.display = 'none';
+        }
+
+        function abrirModalTurno(id) {
+            const overlay = document.getElementById('modalTurnoOverlay');
+            const title = document.getElementById('modalTurnoTitle');
+
+            if (id === 0) {
+                title.innerText = 'Agregar Turno';
+                document.getElementById('turnoId').value = 0;
+                document.getElementById('turnoNombre').value = '';
+                document.getElementById('turnoHoraInicio').value = '';
+                document.getElementById('turnoHoraFin').value = '';
+                document.getElementById('turnoActivo').checked = true;
+                overlay.style.display = 'flex';
+            } else {
+                title.innerText = 'Editar Turno';
+                fetch(`/Turnos/ObtenerTurno?id=${id}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        document.getElementById('turnoId').value = data.id;
+                        document.getElementById('turnoNombre').value = data.nombre;
+                        document.getElementById('turnoHoraInicio').value = data.horaInicio;
+                        document.getElementById('turnoHoraFin').value = data.horaFin;
+                        document.getElementById('turnoActivo').checked = data.activo;
+                        overlay.style.display = 'flex';
+                    });
+            }
+        }
+    </script>
+}

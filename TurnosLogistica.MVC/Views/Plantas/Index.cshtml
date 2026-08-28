@@ -1,5 +1,7 @@
+@model List<TurnosLogistica.Domain.Models.Planta>
 @{
     ViewData["Title"] = "Selector de Planta";
+    int plantaActivaId = ViewBag.PlantaActivaId ?? 1;
 }
 
 <div class="page-header">
@@ -9,40 +11,72 @@
     </div>
 </div>
 
-<div class="notice notice-info" style="margin-bottom:24px">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;margin-top:1px"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-    <span><strong>Sistema multi-planta:</strong> El sistema es multi-planta y funciona sin modificar el código. Cada planta mantiene su propia estructura de Proyecto → Línea → Celda → Estación y catálogo de partes.</span>
+<!-- Notice informativo -->
+<div class="notice notice-info"
+     style="margin-bottom:24px;border:1px solid #bae6fd;background:#f0f9ff;color:#0369a1;padding:14px 16px;border-radius:8px;display:flex;align-items:center;gap:12px;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
+    </svg>
+    <div style="font-size:13px;line-height:1.5;">
+        <strong>Sistema multi-planta:</strong> El sistema es multi-planta y funciona sin modificar el código. Cada
+        planta mantiene su propia estructura de Proyecto → Línea → Celda → Estación y catálogo de partes.
+    </div>
 </div>
 
-<div class="card" style="max-width:680px">
-    <div class="card-title">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--accent)"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+<!-- Card principal -->
+<div class="card" style="padding:24px;">
+    <div
+        style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;color:var(--text-main);margin-bottom:20px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#2563eb">
+            <path
+            d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+        </svg>
         Plantas registradas
     </div>
-    <div class="planta-grid">
-        <div class="planta-card selected">
-            <div class="pc-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--accent)"><path d="M4 10v7h3v-7H4zm6.5 0v7h3v-7h-3zM2 22h19v-3H2v3zm15-12v7h3v-7h-3zM11.5 1L2 6v2h19V6z"/></svg>
-            </div>
-            <h3>Planta 1</h3>
-            <p>Monterrey, N.L.</p>
-            <p style="margin-top:8px;font-size:11px;color:var(--success);font-weight:700">ACTIVA</p>
-        </div>
-        <div class="planta-card">
-            <div class="pc-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--accent)"><path d="M4 10v7h3v-7H4zm6.5 0v7h3v-7h-3zM2 22h19v-3H2v3zm15-12v7h3v-7h-3zM11.5 1L2 6v2h19V6z"/></svg>
-            </div>
-            <h3>Planta 2</h3>
-            <p>Saltillo, Coah.</p>
-            <p style="margin-top:8px;font-size:11px;color:var(--success);font-weight:700">ACTIVA</p>
-        </div>
-        <div class="planta-card">
-            <div class="pc-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--accent)"><path d="M4 10v7h3v-7H4zm6.5 0v7h3v-7h-3zM2 22h19v-3H2v3zm15-12v7h3v-7h-3zM11.5 1L2 6v2h19V6z"/></svg>
-            </div>
-            <h3>Planta 3</h3>
-            <p>San Luis Potosí</p>
-            <p style="margin-top:8px;font-size:11px;color:var(--text-muted);font-weight:600">CONFIGURACIÓN</p>
-        </div>
+
+    <!-- Grid de Plantas -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 280px));gap:20px;">
+        @foreach (var planta in Model)
+        {
+            bool esSeleccionada = (planta.Id == plantaActivaId);
+
+            <form asp-controller="Plantas" asp-action="SeleccionarPlanta" method="post" style="margin:0;">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="plantaId" value="@planta.Id" />
+
+                <button type="submit" style="width:100%;text-align:center;padding:32px 16px;border-radius:12px;cursor:pointer;transition:all 0.2s ease;
+                    background:@(esSeleccionada ? "#eff6ff" : "#ffffff");
+                    border:2px solid @(esSeleccionada ? "#3b82f6" : "#e2e8f0");
+                    box-shadow:@(esSeleccionada ? "0 4px 12px rgba(59, 130, 246, 0.15)" : "none");">
+
+                    <!-- Icono Planta -->
+                    <div style="width:48px;height:48px;border-radius:10px;background:@(esSeleccionada ? "#dbeafe" : "#f1f5f9");
+                        display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="@(esSeleccionada ? "#2563eb" : "#64748b")">
+                            <path
+                            d="M4 10v7h3v-7H4zm6 0v7h3v-7h-3zM2 22h19v-3H2v3zm14-12v7h3v-7h-3zm-5-7L2 7v2h19V7l-9-4z" />
+                        </svg>
+                    </div>
+
+                    <!-- Nombre y Código/Timezone -->
+                    <div style="font-size:16px;font-weight:700;color:var(--text-main);margin-bottom:4px;">
+                        @planta.Nombre
+                    </div>
+                    <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">
+                        @planta.Codigo @(!string.IsNullOrEmpty(planta.Timezone) ? $"({planta.Timezone})" : "")
+                    </div>
+
+                    <!-- Badge de Estado -->
+                    @if (planta.Activa)
+                    {
+                        <span class="badge badge-activo">ACTIVA</span>
+                    }
+                    else
+                    {
+                        <span class="badge badge-inactivo">INACTIVA</span>
+                    }
+                </button>
+            </form>
+        }
     </div>
 </div>

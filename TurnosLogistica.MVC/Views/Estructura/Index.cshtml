@@ -1,3 +1,4 @@
+@model TurnosLogistica.MVC.Models.EstructuraViewModel
 @{
     ViewData["Title"] = "Gestión de Estructura";
 }
@@ -5,71 +6,258 @@
 <div class="page-header">
     <div>
         <div class="page-title">Gestión de Estructura</div>
-        <div class="page-subtitle">Jerarquía: Planta → Proyecto → Línea → Celda → Estación</div>
+        <div class="page-subtitle">Jerarquía: Planta &rarr; Proyecto &rarr; Línea &rarr; Celda &rarr; Estación</div>
     </div>
 </div>
 
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
-    <div class="card">
-        <div class="card-title" style="justify-content:space-between">
-            <span>Árbol de Estructura</span>
-            <button class="btn btn-primary btn-sm" onclick="openModal()">+ Nodo</button>
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; align-items:start;">
+
+    <!-- PANEL IZQUIERDO: ÁRBOL DE ESTRUCTURA -->
+    <div class="card" style="padding:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <div class="card-title" style="margin:0;">Árbol de Estructura</div>
+            <button type="button" class="btn btn-primary btn-sm" onclick="abrirModalNodo()">+ Nodo</button>
         </div>
-        <ul class="tree">
+
+        <ul class="tree" style="margin:0; padding-left:0;">
             <li class="tree-node">
-                <div class="tree-label" onclick="toggleTree('p1')">
-                    <div class="tree-toggle" id="toggle-p1">&#9660;</div>
-                    <span class="level-planta">Planta 1 — Monterrey</span>
+                <!-- Nivel Planta -->
+                <div class="tree-label level-planta" onclick="toggleTree('planta-root')">
+                    <span class="tree-toggle" id="toggle-planta-root">&#9660;</span>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="var(--accent)">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                    </svg>
+                    <span>@Model.PlantaNombre</span>
                 </div>
-                <ul class="tree-children" id="children-p1">
-                    <li class="tree-node">
-                        <div class="tree-label" onclick="toggleTree('p1-pry1')">
-                            <div class="tree-toggle" id="toggle-p1-pry1">&#9660;</div>
-                            <span class="level-proyecto">PRY-CAMRY-25</span>
-                        </div>
-                        <ul class="tree-children" id="children-p1-pry1">
-                            <li class="tree-node">
-                                <div class="tree-label" onclick="toggleTree('la1')">
-                                    <div class="tree-toggle" id="toggle-la1">&#9660;</div>
-                                    <span class="level-linea">Línea A-1</span>
-                                </div>
-                                <ul class="tree-children" id="children-la1">
+
+                <ul class="tree-children" id="children-planta-root">
+                    @foreach (var pry in Model.Proyectos)
+                    {
+                        <li class="tree-node">
+                            <!-- Nivel Proyecto -->
+                            <div class="tree-label level-proyecto" onclick="toggleTree('pry-@pry.Id')">
+                                <span class="tree-toggle" id="toggle-pry-@pry.Id">&#9660;</span>
+                                <span>@pry.Codigo — @pry.Nombre</span>
+                            </div>
+
+                            <ul class="tree-children" id="children-pry-@pry.Id">
+                                @foreach (var lin in pry.Lineas)
+                                {
                                     <li class="tree-node">
-                                        <div class="tree-label" onclick="toggleTree('c101')">
-                                            <div class="tree-toggle" id="toggle-c101">&#9660;</div>
-                                            <span class="level-celda">C-101 — Ensamble Frontal</span>
+                                        <!-- Nivel Línea -->
+                                        <div class="tree-label level-linea" onclick="toggleTree('lin-@lin.Id')">
+                                            <span class="tree-toggle" id="toggle-lin-@lin.Id">&#9660;</span>
+                                            <span>@lin.Nombre</span>
                                         </div>
-                                        <ul class="tree-children" id="children-c101">
-                                            <li class="tree-node"><div class="tree-label"><span class="level-estacion">EST-01 Carga</span></div></li>
-                                            <li class="tree-node"><div class="tree-label"><span class="level-estacion">EST-02 Ensamble</span></div></li>
-                                            <li class="tree-node"><div class="tree-label"><span class="level-estacion">EST-03 Torque</span></div></li>
+
+                                        <ul class="tree-children" id="children-lin-@lin.Id">
+                                            @foreach (var cel in lin.Celdas)
+                                            {
+                                                <li class="tree-node">
+                                                    <!-- Nivel Celda -->
+                                                    <div class="tree-label level-celda" onclick="seleccionarCeldaArbol(@cel.Id); toggleTree('cel-@cel.Id');">
+                                                        <span class="tree-toggle" id="toggle-cel-@cel.Id">&#9660;</span>
+                                                        <strong>@cel.Codigo</strong> <span>— @cel.Nombre</span>
+                                                    </div>
+
+                                                    <ul class="tree-children" id="children-cel-@cel.Id">
+                                                        @foreach (var est in cel.Estaciones)
+                                                        {
+                                                            <li class="tree-node">
+                                                                <div class="tree-label level-estacion">
+                                                                    <span style="display:inline-block; width:12px;"></span>
+                                                                    <span>@est</span>
+                                                                </div>
+                                                            </li>
+                                                        }
+                                                    </ul>
+                                                </li>
+                                            }
                                         </ul>
                                     </li>
-                                </ul>
-                            </li>
-                        </ul>
-                    </li>
+                                }
+                            </ul>
+                        </li>
+                    }
                 </ul>
             </li>
         </ul>
     </div>
 
-    <div class="card">
-        <div class="card-title">Celda → Números de Parte</div>
-        <div class="form-group" style="margin-bottom:12px">
-            <label>Celda seleccionada</label>
-            <select>
-                <option>C-101 — Ensamble Frontal (Línea A-1)</option>
-                <option>C-102 — Ensamble Lateral</option>
+    <!-- PANEL DERECHO: VINCULACIÓN CELDA -> NÚMEROS DE PARTE -->
+    <div class="card" style="padding:20px;">
+        <div class="card-title" style="margin-bottom:14px;">Celda &rarr; Números de Parte</div>
+
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:6px;">
+                CELDA SELECCIONADA
+            </label>
+            <select id="selectCeldaPartes" class="form-control" onchange="cargarPartesDeCelda(this.value)">
+                <option value="">-- Seleccione una celda --</option>
+                @foreach (var c in Model.CeldasDisponibles)
+                {
+                    <option value="@c.Id">@c.Texto</option>
+                }
             </select>
         </div>
-        <div class="multi-select-mock" style="min-height:120px">
-            <div class="ms-tag">84350742 — Bracket Asm Front<button>x</button></div>
-            <div class="ms-tag">84350743 — Bracket Asm Rear<button>x</button></div>
-            <div class="ms-tag">13579246 — Main Harness Asm<button>x</button></div>
+
+        <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">
+            Partes Asignadas a esta Celda
         </div>
-        <div class="form-actions">
-            <button class="btn btn-primary btn-sm" onclick="openModal()">Guardar asignación</button>
+
+        <div id="contenedorPartesAsignadas" style="display:flex; flex-wrap:wrap; gap:8px; min-height:80px; padding:12px; border:1px solid var(--border); border-radius:8px; background:var(--bg); margin-bottom:16px;">
+            <span style="color:var(--text-muted); font-size:12px;">Seleccione una celda para ver y gestionar sus números de parte.</span>
         </div>
+
+        <button type="button" class="btn btn-primary" onclick="guardarAsignacionMensaje()">Guardar asignación</button>
+    </div>
+
+</div>
+
+<!-- MODAL AGREGAR NODO -->
+<div id="modalNodoOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:250; align-items:center; justify-content:center;">
+    <div style="background:var(--surface); border-radius:12px; padding:24px; width:100%; max-width:440px; box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="font-size:16px; font-weight:700; margin:0;">Agregar Nodo a la Estructura</h3>
+            <button type="button" onclick="cerrarModalNodo()" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--text-muted);">&times;</button>
+        </div>
+
+        <form asp-controller="Estructura" asp-action="AgregarNodo" method="post">
+            @Html.AntiForgeryToken()
+            <div class="form-group" style="margin-bottom:12px;">
+                <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">NIVEL JERÁRQUICO *</label>
+                <select name="tipoNodo" id="tipoNodo" class="form-control" onchange="cambiarPadreSegunTipo(this.value)" required>
+                    <option value="proyecto">Proyecto</option>
+                    <option value="linea">Línea</option>
+                    <option value="celda">Celda (Workcenter)</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="grupoPadre" style="margin-bottom:12px; display:none;">
+                <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;" id="lblPadre">PADRE *</label>
+                <select name="padreId" id="padreId" class="form-control"></select>
+            </div>
+
+            <div class="form-group" style="margin-bottom:12px;">
+                <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">CÓDIGO *</label>
+                <input type="text" name="codigo" class="form-control" placeholder="Ej. L-01 o C-101" required />
+            </div>
+
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">NOMBRE *</label>
+                <input type="text" name="nombre" class="form-control" placeholder="Ej. Línea Frontal" required />
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:8px;">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModalNodo()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Crear Nodo</button>
+            </div>
+        </form>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        function toggleTree(id) {
+            const children = document.getElementById('children-' + id);
+            const toggle = document.getElementById('toggle-' + id);
+            if (children) children.classList.toggle('collapsed');
+            if (toggle) toggle.innerHTML = children && children.classList.contains('collapsed') ? '&#9654;' : '&#9660;';
+        }
+
+        function seleccionarCeldaArbol(celdaId) {
+            const select = document.getElementById('selectCeldaPartes');
+            if (select) {
+                select.value = celdaId;
+                cargarPartesDeCelda(celdaId);
+            }
+        }
+
+        function cargarPartesDeCelda(celdaId) {
+            const cont = document.getElementById('contenedorPartesAsignadas');
+            if (!celdaId) {
+                cont.innerHTML = '<span style="color:var(--text-muted); font-size:12px;">Seleccione una celda para ver sus números de parte.</span>';
+                return;
+            }
+
+            cont.innerHTML = '<span style="color:var(--text-muted); font-size:12px;">Cargando partes...</span>';
+
+            fetch(`/Estructura/ObtenerPartesPorCelda?celdaId=${celdaId}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data || data.length === 0) {
+                        cont.innerHTML = '<span style="color:var(--text-muted); font-size:12px;">No hay partes asignadas a esta celda.</span>';
+                        return;
+                    }
+                    cont.innerHTML = '';
+                    data.forEach(p => {
+                        cont.innerHTML += `
+                            <div class="ms-tag" style="display:inline-flex; align-items:center; gap:6px; background:var(--accent-light); color:var(--accent); border-radius:6px; padding:6px 10px; font-size:12px; font-weight:600;">
+                                <span>${p.sapPartNumber} — ${p.descripcion}</span>
+                                <button type="button" onclick="desvincularParte(${p.id}, ${celdaId})" style="border:none; background:none; cursor:pointer; color:var(--accent); font-weight:700; margin-left:4px;">&times;</button>
+                            </div>
+                        `;
+                    });
+                });
+        }
+
+        function desvincularParte(parteId, celdaId) {
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            fetch(`/Estructura/DesvincularParte`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': token
+                },
+                body: `parteId=${parteId}&__RequestVerificationToken=${token}`
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    cargarPartesDeCelda(celdaId);
+                }
+            });
+        }
+
+        function abrirModalNodo() {
+            document.getElementById('tipoNodo').value = 'proyecto';
+            cambiarPadreSegunTipo('proyecto');
+            document.getElementById('modalNodoOverlay').style.display = 'flex';
+        }
+
+        function cerrarModalNodo() {
+            document.getElementById('modalNodoOverlay').style.display = 'none';
+        }
+
+        const proyectosDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.ProyectosJson ?? new object[] { }));
+        const lineasDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.LineasJson ?? new object[] { }));
+
+        function cambiarPadreSegunTipo(tipo) {
+            const grp = document.getElementById('grupoPadre');
+            const lbl = document.getElementById('lblPadre');
+            const selPadre = document.getElementById('padreId');
+
+            selPadre.innerHTML = '';
+
+            if (tipo === 'proyecto') {
+                grp.style.display = 'none';
+            } else if (tipo === 'linea') {
+                lbl.innerText = 'PROYECTO PADRE *';
+                proyectosDisponibles.forEach(p => {
+                    selPadre.innerHTML += `<option value="${p.id}">${p.texto}</option>`;
+                });
+                grp.style.display = 'block';
+            } else if (tipo === 'celda') {
+                lbl.innerText = 'LÍNEA PADRE *';
+                lineasDisponibles.forEach(l => {
+                    selPadre.innerHTML += `<option value="${l.id}">${l.texto}</option>`;
+                });
+                grp.style.display = 'block';
+            }
+        }
+
+        function guardarAsignacionMensaje() {
+            alert('Asignación de números de parte guardada correctamente.');
+        }
+    </script>
+}

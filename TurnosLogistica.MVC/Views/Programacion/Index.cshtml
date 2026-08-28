@@ -1,5 +1,7 @@
+@model TurnosLogistica.MVC.Models.ProgramacionFormViewModel
 @{
     ViewData["Title"] = "Formulario de Programación";
+    var proyectos = ViewBag.Proyectos as List<TurnosLogistica.Domain.Models.Proyecto> ?? new();
 }
 
 <div class="page-header">
@@ -9,89 +11,176 @@
     </div>
 </div>
 
-<div class="card">
-    <div class="card-title">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--accent)"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-        Datos de la Programación
-    </div>
+<form asp-controller="Programacion" asp-action="Guardar" method="post">
+    @Html.AntiForgeryToken()
 
-    <form asp-action="Guardar" method="post">
-        <div class="form-grid">
+    <div class="card" style="max-width:760px;padding:24px;">
+        <h4 style="margin:0 0 16px;display:flex;align-items:center;gap:8px;font-size:14px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+            </svg>
+            Datos de la Programación
+        </h4>
+
+        <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <!-- PROYECTO -->
             <div class="form-group">
-                <label>Proyecto *</label>
-                <select name="proyecto">
-                    <option selected>PRY-CAMRY-25</option>
-                    <option>PRY-TUNDRA-X</option>
-                    <option>PRY-SEQUOIA</option>
+                <label class="form-label" style="font-size:11px;font-weight:700;color:var(--text-muted);">PROYECTO *</label>
+                <select id="selProyecto" name="ProyectoId" class="form-control" onchange="cargarLineas(this.value)" required>
+                    <option value="">-- Seleccione Proyecto --</option>
+                    @foreach (var p in proyectos)
+                    {
+                        <option value="@p.Id">@p.Codigo — @p.Nombre</option>
+                    }
                 </select>
             </div>
+
+            <!-- LÍNEA -->
             <div class="form-group">
-                <label>Línea *</label>
-                <select name="linea">
-                    <option selected>Línea A-1</option>
-                    <option>Línea A-2</option>
+                <label class="form-label" style="font-size:11px;font-weight:700;color:var(--text-muted);">LÍNEA *</label>
+                <select id="selLinea" name="LineaId" class="form-control" onchange="cargarCeldas(this.value)" required>
+                    <option value="">-- Seleccione Proyecto Primero --</option>
                 </select>
             </div>
+
+            <!-- CELDA / WORKCENTER -->
             <div class="form-group">
-                <label>Celda *</label>
-                <select name="celda">
-                    <option selected>C-101 — Ensamble Frontal</option>
-                    <option>C-102 — Ensamble Lateral</option>
+                <label class="form-label" style="font-size:11px;font-weight:700;color:var(--text-muted);">CELDA (WORKCENTER) *</label>
+                <select id="selCelda" name="CeldaId" class="form-control" onchange="cargarPartes(this.value)" required>
+                    <option value="">-- Seleccione Línea Primero --</option>
                 </select>
             </div>
+
+            <!-- FECHA -->
             <div class="form-group">
-                <label>Estación *</label>
-                <select name="estacion">
-                    <option selected>EST-03 — Torque</option>
-                    <option>EST-04 — Inspección</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Fecha de producción *</label>
-                <input type="date" name="fecha" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                <label class="form-label" style="font-size:11px;font-weight:700;color:var(--text-muted);">FECHA DE PRODUCCIÓN *</label>
+                <input type="date" name="FechaProduccion" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
             </div>
         </div>
 
-        <hr class="divider" />
+        <!-- NÚMERO DE PARTE -->
+        <div class="form-group" style="margin-top:16px;">
+            <label class="form-label" style="font-size:11px;font-weight:700;color:var(--text-muted);">NÚMERO DE PARTE (VINCULADO A CELDA) *</label>
+            <select id="selParte" name="NumeroParteId" class="form-control" required>
+                <option value="">-- Seleccione Celda Primero --</option>
+            </select>
+        </div>
 
-        <div class="form-grid">
-            <div class="form-group full">
-                <label>Número(s) de parte * (Vinculados a Celda)</label>
-                <div class="multi-select-mock">
-                    <div class="ms-tag">84350742 — Bracket Asm Front<button type="button">x</button></div>
-                    <div class="ms-tag">84350743 — Bracket Asm Rear<button type="button">x</button></div>
-                </div>
-            </div>
-            <div class="form-group full">
-                <label>Turno *</label>
-                <div class="radio-group">
-                    <label class="radio-option">
-                        <input type="radio" name="turno" value="t1" checked />
-                        <span class="badge badge-t1">T1</span> Matutino (06:00–15:36)
-                    </label>
-                    <label class="radio-option">
-                        <input type="radio" name="turno" value="t2" />
-                        <span class="badge badge-t2">T2</span> Vespertino (14:00–21:30)
-                    </label>
-                    <label class="radio-option">
-                        <input type="radio" name="turno" value="t3" />
-                        <span class="badge badge-t3">T3</span> Nocturno (21:30–06:00)
-                    </label>
-                </div>
-            </div>
-            <div class="form-group">
-                <label>Tiempo estimado (hrs)</label>
-                <input type="number" name="tiempoEstimado" value="8" step="0.5" />
-            </div>
-            <div class="form-group full">
-                <label>Razón * (Obligatoria)</label>
-                <textarea name="razon" placeholder="Describa la razón de la programación..." required></textarea>
+        <!-- SELECTOR DE TURNOS DINÁMICOS -->
+        <div class="form-group" style="margin-top:16px;">
+            <label class="form-label" style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;">TURNO *</label>
+            <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+                @if (ViewBag.Turnos != null)
+                {
+                    int index = 0;
+                    foreach (var t in ViewBag.Turnos)
+                    {
+                        <label style="cursor:pointer;display:flex;align-items:center;gap:6px;font-size:13px;">
+                            <input type="radio" name="TurnoId" value="@t.Id" @(index == 0 ? "checked" : "") onchange="actualizarHorasEstimadas(@t.Horas)" />
+                            <span class="badge badge-@t.ClaseColor">@t.Nombre</span> (@t.Horario)
+                        </label>
+                        index++;
+                    }
+                }
+                else
+                {
+                    <span style="color:var(--text-muted);font-size:12px;">No hay turnos activos para esta planta.</span>
+                }
             </div>
         </div>
 
-        <div class="form-actions">
+        <!-- TIEMPO ESTIMADO -->
+        <div class="form-group" style="margin-top:16px;">
+            <label class="form-label" style="font-size:11px;font-weight:700;color:var(--text-muted);">TIEMPO ESTIMADO (HRS)</label>
+            <input type="number" name="TiempoEstimadoHoras" step="0.5" class="form-control" value="8" style="max-width:160px;" />
+        </div>
+
+        <!-- RAZÓN OBLIGATORIA -->
+        <div class="form-group" style="margin-top:16px;">
+            <label class="form-label" style="font-size:11px;font-weight:700;color:var(--text-muted);">RAZÓN * (OBLIGATORIA)</label>
+            <textarea name="RazonObligatoria" class="form-control" rows="2" placeholder="Escriba el motivo de la programación..." required></textarea>
+        </div>
+
+        <!-- ACCIONES -->
+        <div style="margin-top:24px;display:flex;gap:10px;">
             <button type="submit" class="btn btn-primary">Guardar Programación</button>
             <a asp-controller="Calendario" asp-action="Index" class="btn btn-secondary">Cancelar</a>
         </div>
-    </form>
-</div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        function actualizarHorasEstimadas(horas) {
+            const inputHoras = document.querySelector('input[name="TiempoEstimadoHoras"]');
+            if (inputHoras) {
+                inputHoras.value = horas;
+            }
+        }
+
+        function cargarLineas(proyectoId) {
+            const selLinea = document.getElementById('selLinea');
+            const selCelda = document.getElementById('selCelda');
+            const selParte = document.getElementById('selParte');
+
+            selLinea.innerHTML = '<option value="">Cargando líneas...</option>';
+            selCelda.innerHTML = '<option value="">-- Seleccione Línea Primero --</option>';
+            selParte.innerHTML = '<option value="">-- Seleccione Celda Primero --</option>';
+
+            if (!proyectoId) {
+                selLinea.innerHTML = '<option value="">-- Seleccione Proyecto Primero --</option>';
+                return;
+            }
+
+            fetch(`/Programacion/ObtenerLineasPorProyecto?proyectoId=${proyectoId}`)
+                .then(res => res.json())
+                .then(data => {
+                    selLinea.innerHTML = '<option value="">-- Seleccione Línea --</option>';
+                    data.forEach(item => {
+                        selLinea.innerHTML += `<option value="${item.id}">${item.texto}</option>`;
+                    });
+                });
+        }
+
+        function cargarCeldas(lineaId) {
+            const selCelda = document.getElementById('selCelda');
+            const selParte = document.getElementById('selParte');
+
+            selCelda.innerHTML = '<option value="">Cargando celdas...</option>';
+            selParte.innerHTML = '<option value="">-- Seleccione Celda Primero --</option>';
+
+            if (!lineaId) {
+                selCelda.innerHTML = '<option value="">-- Seleccione Línea Primero --</option>';
+                return;
+            }
+
+            fetch(`/Programacion/ObtenerCeldasPorLinea?lineaId=${lineaId}`)
+                .then(res => res.json())
+                .then(data => {
+                    selCelda.innerHTML = '<option value="">-- Seleccione Celda --</option>';
+                    data.forEach(item => {
+                        selCelda.innerHTML += `<option value="${item.id}">${item.texto}</option>`;
+                    });
+                });
+        }
+
+        function cargarPartes(celdaId) {
+            const selParte = document.getElementById('selParte');
+            selParte.innerHTML = '<option value="">Cargando números de parte...</option>';
+
+            if (!celdaId) {
+                selParte.innerHTML = '<option value="">-- Seleccione Celda Primero --</option>';
+                return;
+            }
+
+            fetch(`/Programacion/ObtenerPartesPorCelda?celdaId=${celdaId}`)
+                .then(res => res.json())
+                .then(data => {
+                    selParte.innerHTML = '<option value="">-- Seleccione Número de Parte --</option>';
+                    data.forEach(item => {
+                        selParte.innerHTML += `<option value="${item.id}">${item.texto}</option>`;
+                    });
+                });
+        }
+    </script>
+}

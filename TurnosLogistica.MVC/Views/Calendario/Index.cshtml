@@ -1,25 +1,64 @@
+@model TurnosLogistica.MVC.Models.CalendarioViewModel
 @{
     ViewData["Title"] = "Calendario de Producción";
-    string agrupacion = ViewBag.Agrupacion ?? "proyecto";
-    string granularidad = ViewBag.Granularidad ?? "mensual";
+    string agrupacion = Model?.Agrupacion ?? "proyecto";
+    string granularidad = Model?.Granularidad ?? "mensual";
+
+    var fechaBase = Model?.FechaSeleccionada ?? DateTime.Today;
+    var primerDiaMes = new DateTime(fechaBase.Year, fechaBase.Month, 1);
+    var diasEnMes = DateTime.DaysInMonth(primerDiaMes.Year, primerDiaMes.Month);
+
+    int diaInicioSemana = (int)primerDiaMes.DayOfWeek;
+    diaInicioSemana = diaInicioSemana == 0 ? 7 : diaInicioSemana;
+
+    var mesAnterior = primerDiaMes.AddMonths(-1);
+    int diasMesAnterior = DateTime.DaysInMonth(mesAnterior.Year, mesAnterior.Month);
+    int totalCeldasPrevias = diaInicioSemana - 1;
+
+    var fechaPrev = granularidad == "mensual" ? fechaBase.AddMonths(-1) : (granularidad == "semanal" ? fechaBase.AddDays(-7) : fechaBase.AddDays(-1));
+    var fechaNext = granularidad == "mensual" ? fechaBase.AddMonths(1) : (granularidad == "semanal" ? fechaBase.AddDays(7) : fechaBase.AddDays(1));
 }
 
-<div class="page-header">
+<!-- ENCABEZADO CON NAVEGADOR DINÁMICO -->
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
     <div>
-        <div class="page-title">Calendario de Producción</div>
-        <div class="page-subtitle">Vista @granularidad — Planta 1 / Agosto 2026</div>
+        <div class="page-title" style="font-size:20px; font-weight:700;">Calendario de Producción</div>
+        <div class="page-subtitle" style="color:var(--text-muted); font-size:13px;">
+            Vista @granularidad.ToUpper() — Planta @(Model?.PlantaId ?? 1) / 
+            @(granularidad == "diario" ? fechaBase.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("es-MX")).ToUpper() : primerDiaMes.ToString("MMMM yyyy", new System.Globalization.CultureInfo("es-MX")).ToUpper())
+        </div>
     </div>
-    <a class="btn btn-primary" asp-controller="Programacion" asp-action="Index">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-        Nueva Programación
-    </a>
+
+    <!-- BOTONES DE CONTROL DE FECHA -->
+    <div style="display:flex; align-items:center; gap:8px;">
+        <a class="btn btn-secondary" style="padding:6px 12px; font-size:12px; font-weight:600; text-decoration:none;"
+           href="?mes=@fechaPrev.Month&anio=@fechaPrev.Year&agrupacion=@agrupacion&granularidad=@granularidad&linea=@Model?.FiltroLinea&celda=@Model?.FiltroCelda&turno=@Model?.FiltroTurno">
+            ◀ Anterior
+        </a>
+
+        <a class="btn btn-secondary" style="padding:6px 12px; font-size:12px; font-weight:600; text-decoration:none;"
+           href="?mes=@DateTime.Today.Month&anio=@DateTime.Today.Year&agrupacion=@agrupacion&granularidad=@granularidad&linea=@Model?.FiltroLinea&celda=@Model?.FiltroCelda&turno=@Model?.FiltroTurno">
+            Hoy
+        </a>
+
+        <a class="btn btn-secondary" style="padding:6px 12px; font-size:12px; font-weight:600; text-decoration:none;"
+           href="?mes=@fechaNext.Month&anio=@fechaNext.Year&agrupacion=@agrupacion&granularidad=@granularidad&linea=@Model?.FiltroLinea&celda=@Model?.FiltroCelda&turno=@Model?.FiltroTurno">
+            Siguiente ▶
+        </a>
+
+        <a class="btn btn-primary" asp-controller="Programacion" asp-action="Index" style="padding:6px 14px; font-size:13px; font-weight:600; text-decoration:none; margin-left:6px;">
+            + Nueva Programación
+        </a>
+    </div>
 </div>
 
-<!-- Agrupación y granularidad -->
-<div class="card" style="padding:16px 20px">
+<!-- SEGMENTED DE AGRUPACIÓN Y GRANULARIDAD -->
+<div class="card" style="padding:16px 20px; margin-bottom:16px;">
     <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-end">
         <div>
-            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px">Agrupación</div>
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px">
+                Agrupación
+            </div>
             <div class="segmented">
                 <a class="seg-btn @(agrupacion == "proyecto" ? "active" : "")" href="?agrupacion=proyecto&granularidad=@granularidad">Proyecto</a>
                 <a class="seg-btn @(agrupacion == "linea" ? "active" : "")" href="?agrupacion=linea&granularidad=@granularidad">Línea (grupo)</a>
@@ -28,7 +67,9 @@
             </div>
         </div>
         <div>
-            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px">Granularidad</div>
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px">
+                Granularidad
+            </div>
             <div class="segmented">
                 <a class="seg-btn @(granularidad == "mensual" ? "active" : "")" href="?agrupacion=@agrupacion&granularidad=mensual">Mensual</a>
                 <a class="seg-btn @(granularidad == "semanal" ? "active" : "")" href="?agrupacion=@agrupacion&granularidad=semanal">Semanal</a>
@@ -37,82 +78,197 @@
         </div>
     </div>
     <div class="notice notice-muted" style="margin-top:14px;margin-bottom:0">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;margin-top:1px"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-        <span><strong>Regla de densidad:</strong> Por Proyecto → mensual (no se satura). Por Línea → semanal. Por Número de parte → diario.</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;margin-top:1px">
+            <path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
+        </svg>
+        <span><strong>Regla de densidad:</strong> Por Proyecto → mensual. Por Línea → semanal. Por Número de parte → diario.</span>
     </div>
 </div>
 
-<!-- Filtros -->
-<div class="filter-bar">
+<!-- FILTROS -->
+<form method="get" asp-controller="Calendario" asp-action="Index" class="filter-bar" style="margin-bottom:16px;">
+    <input type="hidden" name="agrupacion" value="@Model?.Agrupacion" />
+    <input type="hidden" name="granularidad" value="@Model?.Granularidad" />
+
     <div class="filter-group">
         <label>Línea</label>
-        <select><option>Todas</option><option>Línea A-1</option><option>Línea A-2</option><option>Línea B-1</option></select>
+        <select name="linea">
+            <option value="Todas" selected="@(string.IsNullOrEmpty(Model?.FiltroLinea) || Model?.FiltroLinea == "Todas")">Todas</option>
+            @if (Model?.LineasDisponibles != null)
+            {
+                @foreach (var l in Model.LineasDisponibles)
+                {
+                    <option value="@l" selected="@(Model?.FiltroLinea == l)">@l</option>
+                }
+            }
+        </select>
     </div>
+
     <div class="filter-group">
         <label>Celda</label>
-        <select><option>Todas</option><option>C-101</option><option>C-102</option><option>C-201</option></select>
+        <select name="celda">
+            <option value="Todas" selected="@(string.IsNullOrEmpty(Model?.FiltroCelda) || Model?.FiltroCelda == "Todas")">Todas</option>
+            @if (Model?.CeldasDisponibles != null)
+            {
+                @foreach (var c in Model.CeldasDisponibles)
+                {
+                    <option value="@c" selected="@(Model?.FiltroCelda == c)">@c</option>
+                }
+            }
+        </select>
     </div>
+
     <div class="filter-group">
         <label>Turno</label>
-        <select><option>Todos</option><option>T1 — Matutino</option><option>T2 — Vespertino</option><option>T3 — Nocturno</option></select>
+        <select name="turno">
+            <option value="Todos" selected="@(string.IsNullOrEmpty(Model?.FiltroTurno) || Model?.FiltroTurno == "Todos")">Todos</option>
+            @if (Model?.TurnosDisponibles != null)
+            {
+                @foreach (var t in Model.TurnosDisponibles)
+                {
+                    <option value="@t" selected="@(Model?.FiltroTurno == t)">@t</option>
+                }
+            }
+        </select>
     </div>
-    <button class="btn btn-primary btn-sm">Aplicar</button>
-</div>
 
-<!-- Leyenda de turnos -->
-<div class="card" style="padding:12px 20px">
-    <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
-        <div class="legend">
-            <div class="legend-item"><div class="legend-dot" style="background:var(--t1);"></div><span>T1 — Matutino (06:00–15:36)</span></div>
-            <div class="legend-item"><div class="legend-dot" style="background:var(--t2);"></div><span>T2 — Vespertino (14:00–21:30)</span></div>
-            <div class="legend-item"><div class="legend-dot" style="background:#475569;"></div><span>T3 — Nocturno (21:30–06:00)</span></div>
-        </div>
-        <div style="margin-left:auto;display:flex;gap:10px;flex-wrap:wrap">
-            <span class="badge badge-programado">Programado</span>
-            <span class="badge badge-encurso">En curso</span>
-            <span class="badge badge-terminado">Terminado</span>
-            <span class="badge badge-cancelado">Cancelado</span>
-        </div>
-    </div>
-</div>
+    <button type="submit" class="btn btn-primary btn-sm">Aplicar</button>
+    <a asp-action="Index" class="btn btn-secondary btn-sm" style="text-decoration:none;display:inline-flex;align-items:center;">Limpiar</a>
+</form>
 
-<!-- Grid Calendario -->
+<!-- GRID DEL CALENDARIO SEGÚN GRANULARIDAD -->
 <div class="card" style="padding:12px">
-    <div class="cal-header">
-        <div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div><div>Dom</div>
-    </div>
-    <div class="cal-grid">
-        <div class="cal-cell other-month"><div class="cal-day-num">27</div></div>
-        <div class="cal-cell other-month"><div class="cal-day-num">28</div></div>
-        <div class="cal-cell other-month"><div class="cal-day-num">29</div></div>
-        <div class="cal-cell other-month"><div class="cal-day-num">30</div></div>
-        <div class="cal-cell other-month"><div class="cal-day-num">31</div></div>
-        <div class="cal-cell"><div class="cal-day-num">1</div></div>
-        <div class="cal-cell"><div class="cal-day-num">2</div></div>
 
-        <!-- Semana con los 3 turnos activos en Celda C-101 -->
-        <div class="cal-cell"><div class="cal-day-num">3</div>
-            <div class="cal-event cal-event-t1" onclick="openModal()">
-                <div class="cal-event-title">PRY-CAMRY-25</div>
-                <div class="cal-event-meta">L.A-1 / C-101 / 84350742</div>
-                <div style="margin-top:2px;display:flex;gap:3px"><span class="badge badge-t1" style="font-size:9px">T1</span><span class="badge badge-programado" style="font-size:9px">8h</span></div>
-            </div>
-            <div class="cal-event cal-event-t2" onclick="openModal()">
-                <div class="cal-event-title">PRY-CAMRY-25</div>
-                <div class="cal-event-meta">L.A-1 / C-101</div>
-                <div style="margin-top:2px;display:flex;gap:3px"><span class="badge badge-t2" style="font-size:9px">T2</span><span class="badge badge-programado" style="font-size:9px">7.5h</span></div>
-            </div>
-            <div class="cal-event cal-event-t3" onclick="openModal()">
-                <div class="cal-event-title">PRY-CAMRY-25</div>
-                <div class="cal-event-meta">L.A-1 / C-101</div>
-                <div style="margin-top:2px;display:flex;gap:3px"><span class="badge badge-t3" style="font-size:9px">T3</span><span class="badge badge-programado" style="font-size:9px">8h</span></div>
+    @if (granularidad == "diario")
+    {
+        <!-- VISTA DIARIA -->
+        <div class="cal-grid-diario">
+            <div class="cal-cell today">
+                <div class="cal-day-num" style="font-size:14px;margin-bottom:12px;">
+                    <span>@fechaBase.ToString("dddd, dd MMMM yyyy", new System.Globalization.CultureInfo("es-MX")).ToUpper()</span>
+                    <span class="badge badge-programado">@((Model?.Eventos?.Count ?? 0)) Registros</span>
+                </div>
+
+                @if (Model?.Eventos != null && Model.Eventos.Any())
+                {
+                    @foreach (var ev in Model.Eventos)
+                    {
+                        string claseCss = "t1";
+                        string turnoUpper = (ev.TurnoClave ?? "").ToUpperInvariant();
+                        if (turnoUpper.Contains("2") || turnoUpper.Contains("VESP")) claseCss = "t2";
+                        else if (turnoUpper.Contains("3") || turnoUpper.Contains("NOCT")) claseCss = "t3";
+
+                        <div class="cal-event cal-event-@claseCss" style="padding:10px;margin-bottom:8px;font-size:12px;" onclick="openModal()">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <span class="cal-event-title" style="font-size:13px;">@ev.ProyectoCodigo</span>
+                                <span class="badge badge-@claseCss">@ev.TurnoClave</span>
+                            </div>
+                            <div class="cal-event-meta" style="margin:4px 0;">
+                                @ev.LineaNombre / @ev.CeldaCodigo / <strong>@ev.SapPartNumber</strong>
+                            </div>
+                            <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
+                                <span class="badge badge-programado">@ev.Horas h</span>
+                                <span class="badge badge-encurso">@ev.Cantidad pzas</span>
+                                <span class="badge badge-terminado">@ev.Estado</span>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div style="padding:20px;text-align:center;color:var(--text-muted);">No hay eventos programados para este día.</div>
+                }
             </div>
         </div>
-        <div class="cal-cell"><div class="cal-day-num">4</div></div>
-        <div class="cal-cell"><div class="cal-day-num">5</div></div>
-        <div class="cal-cell"><div class="cal-day-num">6</div></div>
-        <div class="cal-cell"><div class="cal-day-num">7</div></div>
-        <div class="cal-cell other-month"><div class="cal-day-num">8</div></div>
-        <div class="cal-cell other-month"><div class="cal-day-num">9</div></div>
-    </div>
+    }
+    else if (granularidad == "semanal")
+    {
+        <!-- VISTA SEMANAL (7 DÍAS) -->
+        <div class="cal-header">
+            <div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div><div>Dom</div>
+        </div>
+        <div class="cal-grid-semanal">
+            @for (int s = 0; s < 7; s++)
+            {
+                var diaSemana = fechaBase.AddDays(s);
+                var eventosSemana = Model?.Eventos?.Where(e => e.Fecha.Date == diaSemana.Date).ToList() ?? new();
+
+                <div class="cal-cell @(diaSemana.Date == DateTime.Today ? "today" : "")">
+                    <div class="cal-day-num">@diaSemana.ToString("ddd dd")</div>
+                    @foreach (var ev in eventosSemana)
+                    {
+                        string claseCss = "t1";
+                        string turnoUpper = (ev.TurnoClave ?? "").ToUpperInvariant();
+                        if (turnoUpper.Contains("2") || turnoUpper.Contains("VESP")) claseCss = "t2";
+                        else if (turnoUpper.Contains("3") || turnoUpper.Contains("NOCT")) claseCss = "t3";
+
+                        <div class="cal-event cal-event-@claseCss" onclick="openModal()">
+                            <div class="cal-event-title">@ev.ProyectoCodigo</div>
+                            <div class="cal-event-meta">@ev.LineaNombre / @ev.CeldaCodigo / @ev.SapPartNumber</div>
+                            <div style="margin-top:2px;display:flex;gap:3px;align-items:center;">
+                                <span class="badge badge-@claseCss" style="font-size:9px">@ev.TurnoClave</span>
+                                <span class="badge badge-programado" style="font-size:9px">@ev.Horas h</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <!-- VISTA MENSUAL -->
+        <div class="cal-header">
+            <div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div><div>Dom</div>
+        </div>
+        <div class="cal-grid">
+            @for (int i = totalCeldasPrevias; i >= 1; i--)
+            {
+                int numDiaPrevio = diasMesAnterior - i + 1;
+                <div class="cal-cell other-month">
+                    <div class="cal-day-num">@numDiaPrevio</div>
+                </div>
+            }
+
+            @for (int dia = 1; dia <= diasEnMes; dia++)
+            {
+                var fechaActual = new DateTime(primerDiaMes.Year, primerDiaMes.Month, dia);
+                var eventosDelDia = Model?.Eventos?.Where(e => e.Fecha.Date == fechaActual.Date).ToList() ?? new();
+
+                <div class="cal-cell @(fechaActual.Date == DateTime.Today ? "today" : "")">
+                    <div class="cal-day-num">@dia</div>
+                    @if (eventosDelDia.Any())
+                    {
+                        @foreach (var ev in eventosDelDia)
+                        {
+                            string claseCss = "t1";
+                            string turnoUpper = (ev.TurnoClave ?? "").ToUpperInvariant();
+                            if (turnoUpper.Contains("2") || turnoUpper.Contains("VESP")) claseCss = "t2";
+                            else if (turnoUpper.Contains("3") || turnoUpper.Contains("NOCT")) claseCss = "t3";
+
+                            <div class="cal-event cal-event-@claseCss" onclick="openModal()">
+                                <div class="cal-event-title">@ev.ProyectoCodigo</div>
+                                <div class="cal-event-meta">@ev.LineaNombre / @ev.CeldaCodigo / @ev.SapPartNumber</div>
+                                <div style="margin-top:2px;display:flex;gap:3px;align-items:center;">
+                                    <span class="badge badge-@claseCss" style="font-size:9px">@ev.TurnoClave</span>
+                                    <span class="badge badge-programado" style="font-size:9px">@ev.Horas h</span>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            }
+
+            @{
+                int totalCeldasActuales = totalCeldasPrevias + diasEnMes;
+                int celdasRestantes = (7 - (totalCeldasActuales % 7)) % 7;
+            }
+            @for (int j = 1; j <= celdasRestantes; j++)
+            {
+                <div class="cal-cell other-month">
+                    <div class="cal-day-num">@j</div>
+                </div>
+            }
+        </div>
+    }
 </div>

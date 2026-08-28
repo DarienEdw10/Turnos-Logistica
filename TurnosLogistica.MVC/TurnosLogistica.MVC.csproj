@@ -1,18 +1,32 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <ItemGroup>
-    <ProjectReference Include="..\TurnosLogistica.Domain\TurnosLogistica.Domain.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Dapper" Version="2.1.79" />
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.2" />
-  </ItemGroup>
-
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TurnosLogistica.Domain\TurnosLogistica.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="8.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.8" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
+  </ItemGroup>
+
+  <!-- Referencias a las DLLs corporativas de Autotek -->
+  <ItemGroup>
+    <Reference Include="Magna.Cosma.Autotek.Autentificacion.Library">
+      <HintPath>..\Libs\Autotek.Autentificacion.Library.dll</HintPath>
+    </Reference>
+    <Reference Include="Magna.Cosma.Autotek.Log">
+      <HintPath>..\Libs\Autotek.Log.dll</HintPath>
+    </Reference>
+    <Reference Include="Magna.Cosma.Autotek.Conexion.Library">
+      <HintPath>..\Libs\Autotek.Conexion.Library.dll</HintPath>
+    </Reference>
+  </ItemGroup>
 
 </Project>

@@ -12,3 +12,12 @@ public class UsuarioViewModel
     public bool Activo { get; set; } = true;
     public DateTime? UltimoAcceso { get; set; }
 }
+
+public class UsuariosViewModel
+{
+    public List<UsuarioViewModel> Empleados { get; set; } = new();
+    public string? TerminoBusqueda { get; set; }
+    public int TotalMostrados => Empleados.Count;
+    public string? MensajeExito { get; set; }
+    public string? MensajeError { get; set; }
+}
