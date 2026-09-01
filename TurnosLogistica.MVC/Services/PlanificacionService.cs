@@ -281,12 +281,26 @@ public class PlanificacionService : IPlanificacionService
 
     public async Task<bool> GuardarProgramacionAsync(ProgramacionFormViewModel model, int usuarioId)
     {
+        int parteId = model.NumeroParteId > 0 ? model.NumeroParteId : 1;
+
+        // Si el usuario especificó la cantidad, se usa esa; de lo contrario se calcula con base en JPH
+        int cantidadFinal = model.CantidadProgramada;
+        if (cantidadFinal <= 0)
+        {
+            var parte = await _parteRepo.GetByIdAsync(parteId);
+            decimal jph = parte?.JPH ?? 50m;
+            decimal oa = (parte?.OA ?? 100m) / 100m;
+            decimal horas = (decimal)model.TiempoEstimadoHoras;
+            cantidadFinal = (int)Math.Round(horas * jph * oa);
+            if (cantidadFinal <= 0) cantidadFinal = 400; // Fallback de seguridad
+        }
+
         var nuevaProg = new ProgramacionProduccion
         {
-            NumeroParteId = model.NumeroParteId > 0 ? model.NumeroParteId : 1,
+            NumeroParteId = parteId,
             Fecha = model.FechaProduccion.Date,
             TurnoId = model.TurnoId,
-            CantidadProgramada = 400,
+            CantidadProgramada = cantidadFinal, // <-- ¡Valor dinámico real sin hardcode!
             OrdenProducir = 1,
             VentanasSalida = 4,
             Estatus = "pendiente",
@@ -305,6 +319,7 @@ public class PlanificacionService : IPlanificacionService
             turno_id = nuevaProg.TurnoId,
             numero_parte_id = nuevaProg.NumeroParteId,
             horas = model.TiempoEstimadoHoras,
+            cantidad = nuevaProg.CantidadProgramada,
             estatus = nuevaProg.Estatus
         });
 

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TurnosLogistica.MVC")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ae9a2dcd66eaaf994b567dcfb96845c13642075b")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e8e24fd2778927c5699c6cb88363d9c281a0e46e")]
 [assembly: System.Reflection.AssemblyProductAttribute("TurnosLogistica.MVC")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TurnosLogistica.MVC")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

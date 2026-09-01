@@ -4,183 +4,735 @@
     var proyectos = ViewBag.Proyectos as List<TurnosLogistica.Domain.Models.Proyecto> ?? new();
 }
 
+<style>
+    /* Multi-select personalizado para celdas */
+    .dropdown-multiselect {
+        position: relative;
+    }
+
+    .multiselect-btn {
+        width: 100%;
+        text-align: left;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .multiselect-menu {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        max-height: 220px;
+        overflow-y: auto;
+        padding: 6px;
+    }
+
+    .multiselect-menu.show {
+        display: block;
+    }
+
+    .multiselect-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px;
+        font-size: 12px;
+        cursor: pointer;
+        border-radius: 4px;
+        margin: 0;
+    }
+
+    .multiselect-item:hover {
+        background: #f1f5f9;
+    }
+
+    .multiselect-item input[type="checkbox"] {
+        cursor: pointer;
+    }
+
+    .date-mode-pills {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 8px;
+        flex-wrap: wrap;
+    }
+
+    .date-pill {
+        border: 1px solid var(--border);
+        background: #f8fafc;
+        color: var(--text-muted);
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .date-pill.active {
+        background: #2563eb;
+        color: #fff;
+        border-color: #2563eb;
+    }
+
+    .chip-dia {
+        background: #2563eb;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 8px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .chip-dia button {
+        background: none;
+        border: none;
+        color: #fff;
+        font-size: 13px;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+        font-weight: bold;
+    }
+</style>
+
 <div class="page-header">
     <div>
         <div class="page-title">Formulario de Programación</div>
-        <div class="page-subtitle">Nueva entrada de producción — campos en cascada</div>
+        <div class="page-subtitle">Programación individual o masiva por celda y rango / días salteados</div>
     </div>
 </div>
 
-<form asp-controller="Programacion" asp-action="Guardar" method="post">
+<form id="frmProgramacion" asp-controller="Programacion" asp-action="Guardar" method="post"
+      onsubmit="return ejecutarEnvio(event)">
     @Html.AntiForgeryToken()
 
     <div class="card" style="max-width:760px;padding:24px;">
         <h4 style="margin:0 0 16px;display:flex;align-items:center;gap:8px;font-size:14px;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+                <path
+                d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
             </svg>
             Datos de la Programación
         </h4>
 
+        <!-- BLOQUE 1: PROYECTO Y LÍNEA -->
         <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
             <!-- PROYECTO -->
             <div class="form-group">
-                <label class="form-label" style="font-size:11px;font-weight:700;color:var(--text-muted);">PROYECTO *</label>
-                <select id="selProyecto" name="ProyectoId" class="form-control" onchange="cargarLineas(this.value)" required>
-                    <option value="">-- Seleccione Proyecto --</option>
-                    @foreach (var p in proyectos)
-                    {
-                        <option value="@p.Id">@p.Codigo — @p.Nombre</option>
-                    }
-                </select>
-            </div>
+                <label class="form-label"
+                       style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px;">PROYECTO
+                    *</label>
+                    <select id="selProyecto" name="ProyectoId" class="form-control" required>
+                        <option value="">-- Seleccione Proyecto --</option>
+                        @foreach (var p in proyectos)
+                        {
+                            <option value="@p.Id">@p.Codigo — @p.Nombre</option>
+                        }
+                    </select>
+                </div>
 
-            <!-- LÍNEA -->
-            <div class="form-group">
-                <label class="form-label" style="font-size:11px;font-weight:700;color:var(--text-muted);">LÍNEA *</label>
-                <select id="selLinea" name="LineaId" class="form-control" onchange="cargarCeldas(this.value)" required>
-                    <option value="">-- Seleccione Proyecto Primero --</option>
-                </select>
-            </div>
+                <!-- LÍNEA -->
+                <div class="form-group">
+                    <label class="form-label"
+                           style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px;">LÍNEA
+                        *</label>
+                        <select id="selLinea" name="LineaId" class="form-control" required>
+                            <option value="">-- Seleccione Proyecto Primero --</option>
+                        </select>
+                    </div>
+                </div>
 
-            <!-- CELDA / WORKCENTER -->
-            <div class="form-group">
-                <label class="form-label" style="font-size:11px;font-weight:700;color:var(--text-muted);">CELDA (WORKCENTER) *</label>
-                <select id="selCelda" name="CeldaId" class="form-control" onchange="cargarPartes(this.value)" required>
-                    <option value="">-- Seleccione Línea Primero --</option>
-                </select>
-            </div>
+                <!-- BLOQUE 2: CELDAS Y FECHAS -->
+                <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
+                    <!-- CELDAS (MULTISELECCIÓN O INDIVIDUAL) -->
+                    <div class="form-group">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <label class="form-label mb-0" style="font-size:11px;font-weight:700;color:var(--text-muted);">CELDA
+                                (WORKCENTER) *</label>
+                                <button type="button" class="btn btn-link btn-sm p-0" id="btnToggleAllCeldas"
+                                        style="font-size:11px; text-decoration:none; display:none;" onclick="toggleTodasCeldas()">
+                                    Seleccionar Todas
+                                </button>
+                            </div>
 
-            <!-- FECHA -->
-            <div class="form-group">
-                <label class="form-label" style="font-size:11px;font-weight:700;color:var(--text-muted);">FECHA DE PRODUCCIÓN *</label>
-                <input type="date" name="FechaProduccion" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
-            </div>
-        </div>
+                            <div class="dropdown-multiselect">
+                                <button type="button" class="multiselect-btn" id="btnCeldaSelect" onclick="toggleMenuCeldas()">
+                                    <span id="lblCeldasSeleccionadas">-- Seleccione Línea Primero --</span>
+                                    <svg width="12" height="12" viewBox="0 0 24 24">
+                                        <path d="M7 10l5 5 5-5z" />
+                                    </svg>
+                                </button>
+                                <div class="multiselect-menu" id="menuCeldas">
+                                    <div style="color:var(--text-muted); font-size:12px; padding:6px;">Seleccione una línea
+                                        primero...</div>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="hdnCeldaIdUnica" name="CeldaId" value="" />
+                            </div>
 
-        <!-- NÚMERO DE PARTE -->
-        <div class="form-group" style="margin-top:16px;">
-            <label class="form-label" style="font-size:11px;font-weight:700;color:var(--text-muted);">NÚMERO DE PARTE (VINCULADO A CELDA) *</label>
-            <select id="selParte" name="NumeroParteId" class="form-control" required>
-                <option value="">-- Seleccione Celda Primero --</option>
-            </select>
-        </div>
+                            <!-- FECHAS -->
+                            <div class="form-group">
+                                <label class="form-label"
+                                       style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px;">FECHA(S)
+                                    DE PRODUCCIÓN *</label>
 
-        <!-- SELECTOR DE TURNOS DINÁMICOS -->
-        <div class="form-group" style="margin-top:16px;">
-            <label class="form-label" style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;">TURNO *</label>
-            <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
-                @if (ViewBag.Turnos != null)
-                {
-                    int index = 0;
-                    foreach (var t in ViewBag.Turnos)
-                    {
-                        <label style="cursor:pointer;display:flex;align-items:center;gap:6px;font-size:13px;">
-                            <input type="radio" name="TurnoId" value="@t.Id" @(index == 0 ? "checked" : "") onchange="actualizarHorasEstimadas(@t.Horas)" />
-                            <span class="badge badge-@t.ClaseColor">@t.Nombre</span> (@t.Horario)
-                        </label>
-                        index++;
-                    }
-                }
-                else
-                {
-                    <span style="color:var(--text-muted);font-size:12px;">No hay turnos activos para esta planta.</span>
-                }
-            </div>
-        </div>
+                                    <div class="date-mode-pills">
+                                        <button type="button" class="date-pill active" id="btnPillDia" onclick="cambiarModoFecha('dia')">Día
+                                            Individual</button>
+                                            <button type="button" class="date-pill" id="btnPillSalteados"
+                                                    onclick="cambiarModoFecha('salteados')">Días Específicos / Salteados</button>
+                                            <button type="button" class="date-pill" id="btnPillSemana" onclick="cambiarModoFecha('semana')">Toda
+                                                la Semana</button>
+                                                <button type="button" class="date-pill" id="btnPillRango" onclick="cambiarModoFecha('rango')">Rango
+                                                    Libre</button>
+                                                </div>
 
-        <!-- TIEMPO ESTIMADO -->
-        <div class="form-group" style="margin-top:16px;">
-            <label class="form-label" style="font-size:11px;font-weight:700;color:var(--text-muted);">TIEMPO ESTIMADO (HRS)</label>
-            <input type="number" name="TiempoEstimadoHoras" step="0.5" class="form-control" value="8" style="max-width:160px;" />
-        </div>
+                                                <!-- 1. Día individual -->
+                                                <div id="wrapModoDia">
+                                                    <input type="date" id="txtFechaIndividual" name="FechaProduccion" class="form-control"
+                                                           value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                                                </div>
 
-        <!-- RAZÓN OBLIGATORIA -->
-        <div class="form-group" style="margin-top:16px;">
-            <label class="form-label" style="font-size:11px;font-weight:700;color:var(--text-muted);">RAZÓN * (OBLIGATORIA)</label>
-            <textarea name="RazonObligatoria" class="form-control" rows="2" placeholder="Escriba el motivo de la programación..." required></textarea>
-        </div>
+                                                <!-- 2. Días específicos / Salteados -->
+                                                <div id="wrapModoSalteados" style="display:none;">
+                                                    <div style="display:flex; gap:8px; margin-bottom:8px;">
+                                                        <input type="date" id="txtFechaSalteada" class="form-control"
+                                                               value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                                                        <button type="button" class="btn btn-secondary btn-sm" onclick="agregarDiaSalteado()"
+                                                                style="white-space:nowrap; padding:0 12px;">
+                                                            + Agregar Día
+                                                        </button>
+                                                    </div>
+                                                    <div id="listaDiasSalteados"
+                                                         style="display:flex; flex-wrap:wrap; gap:6px; min-height:36px; padding:8px; background:#f8fafc; border:1px dashed var(--border); border-radius:6px; align-items:center;">
+                                                        <span style="font-size:11px; color:var(--text-muted);">No has agregado días aún. Elige una fecha
+                                                            y haz clic en '+ Agregar Día'.</span>
+                                                        </div>
+                                                    </div>
 
-        <!-- ACCIONES -->
-        <div style="margin-top:24px;display:flex;gap:10px;">
-            <button type="submit" class="btn btn-primary">Guardar Programación</button>
-            <a asp-controller="Calendario" asp-action="Index" class="btn btn-secondary">Cancelar</a>
-        </div>
-    </div>
-</form>
+                                                    <!-- 3. Toda la semana -->
+                                                    <div id="wrapModoSemana" style="display:none;">
+                                                        <input type="week" id="txtSemana" class="form-control"
+                                                               onchange="actualizarInfoSemana(this.value)" />
+                                                        <div id="lblInfoSemana" style="font-size:11px; color:#2563eb; font-weight:600; margin-top:4px;">
+                                                        </div>
+                                                    </div>
 
-@section Scripts {
-    <script>
-        function actualizarHorasEstimadas(horas) {
-            const inputHoras = document.querySelector('input[name="TiempoEstimadoHoras"]');
-            if (inputHoras) {
-                inputHoras.value = horas;
-            }
-        }
+                                                    <!-- 4. Rango libre -->
+                                                    <div id="wrapModoRango" style="display:none; gap:8px;">
+                                                        <div style="flex:1;">
+                                                            <span style="font-size:10px; color:var(--text-muted);">Desde:</span>
+                                                            <input type="date" id="txtFechaDesde" class="form-control" />
+                                                        </div>
+                                                        <div style="flex:1;">
+                                                            <span style="font-size:10px; color:var(--text-muted);">Hasta:</span>
+                                                            <input type="date" id="txtFechaHasta" class="form-control" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-        function cargarLineas(proyectoId) {
-            const selLinea = document.getElementById('selLinea');
-            const selCelda = document.getElementById('selCelda');
-            const selParte = document.getElementById('selParte');
+                                            <!-- BLOQUE 3: NÚMERO DE PARTE -->
+                                            <div class="form-group" style="margin-top:16px;">
+                                                <label class="form-label"
+                                                       style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px;">NÚMERO
+                                                    DE PARTE (VINCULADO A CELDA) *</label>
+                                                    <select id="selParte" name="NumeroParteId" class="form-control" required>
+                                                        <option value="">-- Seleccione Celda Primero --</option>
+                                                    </select>
+                                                </div>
 
-            selLinea.innerHTML = '<option value="">Cargando líneas...</option>';
-            selCelda.innerHTML = '<option value="">-- Seleccione Línea Primero --</option>';
-            selParte.innerHTML = '<option value="">-- Seleccione Celda Primero --</option>';
+                                                <!-- BLOQUE 4: SELECTOR DE TURNOS -->
+                                                <div class="form-group" style="margin-top:16px;">
+                                                    <label class="form-label"
+                                                           style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;">TURNO
+                                                        *</label>
+                                                        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+                                                            @if (ViewBag.Turnos != null)
+                                                            {
+                                                                int index = 0;
+                                                                foreach (var t in ViewBag.Turnos)
+                                                                {
+                                                                    <label style="cursor:pointer;display:flex;align-items:center;gap:6px;font-size:13px;">
+                                                                        <input type="radio" name="TurnoId" value="@t.Id" @(index == 0 ? "checked" : "")
+                                                                               onchange="actualizarHorasEstimadas(@t.Horas)" />
+                                                                        <span class="badge badge-@t.ClaseColor">@t.Nombre</span> (@t.Horario)
+                                                                    </label>
+                                                                    index++;
+                                                                }
+                                                            }
+                                                            else
+                                                            {
+                                                                <span style="color:var(--text-muted);font-size:12px;">No hay turnos activos para esta planta.</span>
+                                                            }
+                                                        </div>
+                                                    </div>
 
-            if (!proyectoId) {
-                selLinea.innerHTML = '<option value="">-- Seleccione Proyecto Primero --</option>';
-                return;
-            }
+                                                    <!-- BLOQUE 5: CANTIDAD Y TIEMPO ESTIMADO PERFECTAMENTE ALINEADOS -->
+                                                    <div class="form-grid"
+                                                         style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px; align-items:start;">
+                                                        <!-- CANTIDAD A PRODUCIR -->
+                                                        <div class="form-group" style="margin:0;">
+                                                            <label class="form-label"
+                                                                   style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:6px;">
+                                                                CANTIDAD A PRODUCIR (PIEZAS) *
+                                                            </label>
+                                                            <input type="number" id="txtCantidadProgramada" name="CantidadProgramada" class="form-control"
+                                                                   placeholder="Ej. 450" min="1" required style="width:100%; height:38px; box-sizing:border-box;" />
+                                                        </div>
 
-            fetch(`/Programacion/ObtenerLineasPorProyecto?proyectoId=${proyectoId}`)
-                .then(res => res.json())
-                .then(data => {
-                    selLinea.innerHTML = '<option value="">-- Seleccione Línea --</option>';
-                    data.forEach(item => {
-                        selLinea.innerHTML += `<option value="${item.id}">${item.texto}</option>`;
-                    });
-                });
-        }
+                                                        <!-- TIEMPO ESTIMADO -->
+                                                        <div class="form-group" style="margin:0;">
+                                                            <label class="form-label"
+                                                                   style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:6px;">
+                                                                TIEMPO ESTIMADO (HRS)
+                                                            </label>
+                                                            <input type="number" id="txtTiempoEstimado" name="TiempoEstimadoHoras" step="0.5" class="form-control"
+                                                                   value="8" style="width:100%; height:38px; box-sizing:border-box;" />
+                                                        </div>
+                                                    </div>
 
-        function cargarCeldas(lineaId) {
-            const selCelda = document.getElementById('selCelda');
-            const selParte = document.getElementById('selParte');
+                                                    <!-- BLOQUE 6: RAZÓN OBLIGATORIA (ANCHO COMPLETO) -->
+                                                    <div class="form-group" style="margin-top:16px;">
+                                                        <label class="form-label"
+                                                               style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:6px;">
+                                                            RAZÓN * (OBLIGATORIA)
+                                                        </label>
+                                                        <textarea id="txtRazonObligatoria" name="RazonObligatoria" class="form-control" rows="2"
+                                                                  placeholder="Escriba el motivo de la programación..." required
+                                                                  style="width:100%; box-sizing:border-box;"></textarea>
+                                                    </div>
 
-            selCelda.innerHTML = '<option value="">Cargando celdas...</option>';
-            selParte.innerHTML = '<option value="">-- Seleccione Celda Primero --</option>';
+                                                    <!-- BLOQUE 7: BOTONES DE ACCIÓN -->
+                                                    <div style="margin-top:24px; display:flex; gap:10px;">
+                                                        <button type="submit" id="btnSubmitProgramacion" class="btn btn-primary"
+                                                                style="padding:10px 24px; font-weight:700;">Guardar Programación</button>
+                                                        <a asp-controller="Calendario" asp-action="Index" class="btn btn-secondary"
+                                                           style="padding:10px 20px;">Cancelar</a>
+                                                    </div>
+                                                </div>
+                                            </form>
 
-            if (!lineaId) {
-                selCelda.innerHTML = '<option value="">-- Seleccione Línea Primero --</option>';
-                return;
-            }
+                                            @section Scripts {
+                                                <script>
+                                                    let modoFechaActual = 'dia';
+                                                    let celdasDisponibles = [];
+                                                    let diasSalteados = [];
 
-            fetch(`/Programacion/ObtenerCeldasPorLinea?lineaId=${lineaId}`)
-                .then(res => res.json())
-                .then(data => {
-                    selCelda.innerHTML = '<option value="">-- Seleccione Celda --</option>';
-                    data.forEach(item => {
-                        selCelda.innerHTML += `<option value="${item.id}">${item.texto}</option>`;
-                    });
-                });
-        }
+                                                    document.addEventListener('DOMContentLoaded', () => {
+                                                        const selProyecto = document.getElementById('selProyecto');
+                                                        const selLinea = document.getElementById('selLinea');
 
-        function cargarPartes(celdaId) {
-            const selParte = document.getElementById('selParte');
-            selParte.innerHTML = '<option value="">Cargando números de parte...</option>';
+                                                        if (selProyecto) {
+                                                            selProyecto.addEventListener('change', (e) => {
+                                                                cargarLineas(e.target.value);
+                                                            });
+                                                        }
 
-            if (!celdaId) {
-                selParte.innerHTML = '<option value="">-- Seleccione Celda Primero --</option>';
-                return;
-            }
+                                                        if (selLinea) {
+                                                            selLinea.addEventListener('change', (e) => {
+                                                                cargarCeldas(e.target.value);
+                                                            });
+                                                        }
+                                                    });
 
-            fetch(`/Programacion/ObtenerPartesPorCelda?celdaId=${celdaId}`)
-                .then(res => res.json())
-                .then(data => {
-                    selParte.innerHTML = '<option value="">-- Seleccione Número de Parte --</option>';
-                    data.forEach(item => {
-                        selParte.innerHTML += `<option value="${item.id}">${item.texto}</option>`;
-                    });
-                });
-        }
-    </script>
-}
+                                                    // 1. CARGAR LÍNEAS
+                                                    async function cargarLineas(proyectoId) {
+                                                        const selLinea = document.getElementById('selLinea');
+                                                        const menuCeldas = document.getElementById('menuCeldas');
+                                                        const lblCeldas = document.getElementById('lblCeldasSeleccionadas');
+                                                        const btnToggle = document.getElementById('btnToggleAllCeldas');
+                                                        const selParte = document.getElementById('selParte');
+
+                                                        selLinea.innerHTML = '<option value="">Cargando líneas...</option>';
+                                                        if (menuCeldas) menuCeldas.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:6px;">Seleccione una línea primero...</div>';
+                                                        if (lblCeldas) lblCeldas.textContent = '-- Seleccione Línea Primero --';
+                                                        if (btnToggle) btnToggle.style.display = 'none';
+                                                        if (selParte) selParte.innerHTML = '<option value="">-- Seleccione Celda Primero --</option>';
+                                                        celdasDisponibles = [];
+
+                                                        if (!proyectoId) {
+                                                            selLinea.innerHTML = '<option value="">-- Seleccione Proyecto Primero --</option>';
+                                                            return;
+                                                        }
+
+                                                        try {
+                                                            const resp = await fetch(`/Programacion/ObtenerLineasPorProyecto?proyectoId=${encodeURIComponent(proyectoId)}`);
+                                                            const data = await resp.json();
+
+                                                            selLinea.innerHTML = '<option value="">-- Seleccione Línea --</option>';
+                                                            if (data && data.length > 0) {
+                                                                data.forEach(item => {
+                                                                    const id = item.id || item.Id;
+                                                                    const texto = item.texto || item.Texto || item.nombre || item.Nombre;
+                                                                    selLinea.innerHTML += `<option value="${id}">${texto}</option>`;
+                                                                });
+                                                            } else {
+                                                                selLinea.innerHTML = '<option value="">(Sin líneas asignadas)</option>';
+                                                            }
+                                                        } catch (err) {
+                                                            console.error(err);
+                                                            selLinea.innerHTML = '<option value="">Error al cargar líneas</option>';
+                                                        }
+                                                    }
+
+                                                    // 2. CARGAR CELDAS
+                                                    async function cargarCeldas(lineaId) {
+                                                        const menuCeldas = document.getElementById('menuCeldas');
+                                                        const lblCeldas = document.getElementById('lblCeldasSeleccionadas');
+                                                        const btnToggle = document.getElementById('btnToggleAllCeldas');
+                                                        const selParte = document.getElementById('selParte');
+
+                                                        if (menuCeldas) menuCeldas.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:6px;">Cargando celdas...</div>';
+                                                        if (lblCeldas) lblCeldas.textContent = '-- Seleccione Celdas --';
+                                                        if (selParte) selParte.innerHTML = '<option value="">-- Seleccione Celda Primero --</option>';
+                                                        celdasDisponibles = [];
+
+                                                        if (!lineaId) {
+                                                            if (menuCeldas) menuCeldas.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:6px;">Seleccione una línea primero...</div>';
+                                                            if (btnToggle) btnToggle.style.display = 'none';
+                                                            return;
+                                                        }
+
+                                                        try {
+                                                            const resp = await fetch(`/Programacion/ObtenerCeldasPorLinea?lineaId=${encodeURIComponent(lineaId)}`);
+                                                            const data = await resp.json();
+                                                            celdasDisponibles = data || [];
+
+                                                            if (!celdasDisponibles || celdasDisponibles.length === 0) {
+                                                                if (menuCeldas) menuCeldas.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:6px;">No hay celdas para esta línea.</div>';
+                                                                if (btnToggle) btnToggle.style.display = 'none';
+                                                                return;
+                                                            }
+
+                                                            if (btnToggle) btnToggle.style.display = 'inline-block';
+                                                            if (menuCeldas) {
+                                                                menuCeldas.innerHTML = celdasDisponibles.map(item => {
+                                                                    const id = item.id || item.Id;
+                                                                    const texto = item.texto || item.Texto;
+                                                                    return `
+                                                                        <label class="multiselect-item">
+                                                                            <input type="checkbox" class="chk-celda" value="${id}" data-nombre="${texto}" onchange="actualizarTextoCeldas()" />
+                                                                            <span>${texto}</span>
+                                                                        </label>
+                                                                    `;
+                                                                }).join('');
+                                                            }
+                                                        } catch (err) {
+                                                            console.error(err);
+                                                            if (menuCeldas) menuCeldas.innerHTML = '<div style="color:#dc2626; font-size:12px; padding:6px;">Error al cargar celdas</div>';
+                                                        }
+                                                    }
+
+                                                    // 3. CARGAR PARTES
+                                                    async function cargarPartes(celdaId) {
+                                                        const selParte = document.getElementById('selParte');
+                                                        if (!selParte) return;
+
+                                                        selParte.innerHTML = '<option value="">Cargando números de parte...</option>';
+
+                                                        if (!celdaId) {
+                                                            selParte.innerHTML = '<option value="">-- Seleccione Celda Primero --</option>';
+                                                            return;
+                                                        }
+
+                                                        try {
+                                                            const resp = await fetch(`/Programacion/ObtenerPartesPorCelda?celdaId=${encodeURIComponent(celdaId)}`);
+                                                            const data = await resp.json();
+
+                                                            selParte.innerHTML = '<option value="">-- Seleccione Número de Parte --</option>';
+                                                            if (data && data.length > 0) {
+                                                                data.forEach(item => {
+                                                                    const id = item.id || item.Id;
+                                                                    const texto = item.texto || item.Texto;
+                                                                    selParte.innerHTML += `<option value="${id}">${texto}</option>`;
+                                                                });
+                                                            } else {
+                                                                selParte.innerHTML = '<option value="0">(Sin partes específicas vinculadas)</option>';
+                                                            }
+                                                        } catch (err) {
+                                                            console.error(err);
+                                                            selParte.innerHTML = '<option value="">Error al cargar partes</option>';
+                                                        }
+                                                    }
+
+                                                    // GESTIÓN MULTI-CELDA
+                                                    function toggleMenuCeldas() {
+                                                        const menu = document.getElementById('menuCeldas');
+                                                        if (menu && celdasDisponibles.length > 0) {
+                                                            menu.classList.toggle('show');
+                                                        }
+                                                    }
+
+                                                    document.addEventListener('click', (e) => {
+                                                        const wrap = document.querySelector('.dropdown-multiselect');
+                                                        if (wrap && !wrap.contains(e.target)) {
+                                                            const menu = document.getElementById('menuCeldas');
+                                                            if (menu) menu.classList.remove('show');
+                                                        }
+                                                    });
+
+                                                    function toggleTodasCeldas() {
+                                                        const checks = document.querySelectorAll('.chk-celda');
+                                                        if (checks.length === 0) return;
+
+                                                        const todasMarcadas = Array.from(checks).every(c => c.checked);
+                                                        checks.forEach(c => c.checked = !todasMarcadas);
+                                                        actualizarTextoCeldas();
+                                                    }
+
+                                                    function actualizarTextoCeldas() {
+                                                        const seleccionadas = Array.from(document.querySelectorAll('.chk-celda:checked'));
+                                                        const lbl = document.getElementById('lblCeldasSeleccionadas');
+                                                        const hdnCelda = document.getElementById('hdnCeldaIdUnica');
+
+                                                        if (seleccionadas.length === 0) {
+                                                            if (lbl) lbl.textContent = '-- Seleccione Celdas --';
+                                                            if (hdnCelda) hdnCelda.value = '';
+                                                            cargarPartes('');
+                                                        } else if (seleccionadas.length === 1) {
+                                                            if (lbl) lbl.textContent = seleccionadas[0].dataset.nombre;
+                                                            if (hdnCelda) hdnCelda.value = seleccionadas[0].value;
+                                                            cargarPartes(seleccionadas[0].value);
+                                                        } else {
+                                                            if (lbl) lbl.textContent = `${seleccionadas.length} celdas seleccionadas`;
+                                                            if (hdnCelda) hdnCelda.value = seleccionadas[0].value;
+                                                            cargarPartes(seleccionadas[0].value);
+                                                        }
+                                                    }
+
+                                                    // GESTIÓN DE MODOS DE FECHA
+                                                    function cambiarModoFecha(modo) {
+                                                        modoFechaActual = modo;
+                                                        document.querySelectorAll('.date-pill').forEach(p => p.classList.remove('active'));
+
+                                                        if (modo === 'dia') document.getElementById('btnPillDia').classList.add('active');
+                                                        if (modo === 'salteados') document.getElementById('btnPillSalteados').classList.add('active');
+                                                        if (modo === 'semana') document.getElementById('btnPillSemana').classList.add('active');
+                                                        if (modo === 'rango') document.getElementById('btnPillRango').classList.add('active');
+
+                                                        document.getElementById('wrapModoDia').style.display = modo === 'dia' ? 'block' : 'none';
+                                                        document.getElementById('wrapModoSalteados').style.display = modo === 'salteados' ? 'block' : 'none';
+                                                        document.getElementById('wrapModoSemana').style.display = modo === 'semana' ? 'block' : 'none';
+                                                        document.getElementById('wrapModoRango').style.display = modo === 'rango' ? 'flex' : 'none';
+
+                                                        const txtIndividual = document.getElementById('txtFechaIndividual');
+                                                        if (txtIndividual) {
+                                                            if (modo === 'dia') txtIndividual.setAttribute('required', 'required');
+                                                            else txtIndividual.removeAttribute('required');
+                                                        }
+                                                    }
+
+                                                    // DÍAS SALTEADOS / ESPECÍFICOS
+                                                    function agregarDiaSalteado() {
+                                                        const input = document.getElementById('txtFechaSalteada');
+                                                        const valor = input.value;
+                                                        if (!valor) return;
+
+                                                        if (!diasSalteados.includes(valor)) {
+                                                            diasSalteados.push(valor);
+                                                            diasSalteados.sort();
+                                                            renderizarDiasSalteados();
+                                                        }
+                                                    }
+
+                                                    function removerDiaSalteado(fecha) {
+                                                        diasSalteados = diasSalteados.filter(f => f !== fecha);
+                                                        renderizarDiasSalteados();
+                                                    }
+
+                                                    function renderizarDiasSalteados() {
+                                                        const contenedor = document.getElementById('listaDiasSalteados');
+                                                        if (diasSalteados.length === 0) {
+                                                            contenedor.innerHTML = '<span style="font-size:11px; color:var(--text-muted);">No has agregado días aún. Elige una fecha y haz clic en \'+ Agregar Día\'.</span>';
+                                                            return;
+                                                        }
+
+                                                        contenedor.innerHTML = diasSalteados.map(f => {
+                                                            const d = new Date(f + 'T00:00:00');
+                                                            const formato = d.toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: 'short' });
+                                                            return `
+                                                                <span class="chip-dia">
+                                                                    ${formato}
+                                                                    <button type="button" onclick="removerDiaSalteado('${f}')" title="Quitar fecha">&times;</button>
+                                                                </span>
+                                                            `;
+                                                        }).join('');
+                                                    }
+
+                                                    // SEMANA
+                                                    function actualizarInfoSemana(valorSemana) {
+                                                        if (!valorSemana) return;
+                                                        const fechas = obtenerFechasDeSemana(valorSemana);
+                                                        const fInicio = fechas[0].toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+                                                        const fFin = fechas[fechas.length - 1].toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+                                                        const lbl = document.getElementById('lblInfoSemana');
+                                                        if (lbl) lbl.textContent = `📅 Programando 6 turnos: Lun ${fInicio} al Sáb ${fFin}`;
+                                                    }
+
+                                                    function obtenerFechasDeSemana(weekStr) {
+                                                        const [year, week] = weekStr.split('-W').map(Number);
+                                                        const simple = new Date(year, 0, 1 + (week - 1) * 7);
+                                                        const dow = simple.getDay();
+                                                        const ISOweekStart = simple;
+                                                        if (dow <= 4)
+                                                            ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
+                                                        else
+                                                            ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
+
+                                                        const dias = [];
+                                                        for (let i = 0; i < 6; i++) {
+                                                            const d = new Date(ISOweekStart);
+                                                            d.setDate(d.getDate() + i);
+                                                            dias.push(d);
+                                                        }
+                                                        return dias;
+                                                    }
+
+                                                    // RECOPILAR FECHAS SEGÚN MODO
+                                                    function recopilarFechas() {
+                                                        const lista = [];
+
+                                                        if (modoFechaActual === 'dia') {
+                                                            const f = document.getElementById('txtFechaIndividual')?.value;
+                                                            if (f) lista.push(f);
+                                                        }
+                                  |                      else if (modoFechaActual === 'salteados') {
+                                                            return [...diasSalteados];
+                                                        }
+                                                        else if (modoFechaActual === 'semana') {
+                                                            const sem = document.getElementById('txtSemana')?.value;
+                                                            if (sem) {
+                                                                const fechas = obtenerFechasDeSemana(sem);
+                                                                fechas.forEach(d => lista.push(d.toISOString().split('T')[0]));
+                                                            }
+                                                        }
+                                                        else if (modoFechaActual === 'rango') {
+                                                            const fInicioVal = document.getElementById('txtFechaDesde')?.value;
+                                                            const fFinVal = document.getElementById('txtFechaHasta')?.value;
+
+                                                            if (fInicioVal && fFinVal) {
+                                                                const fInicio = new Date(fInicioVal + 'T00:00:00');
+                                                                const fFin = new Date(fFinVal + 'T00:00:00');
+
+                                                                if (fInicio <= fFin) {
+                                                                    let actual = new Date(fInicio);
+                                                                    while (actual <= fFin) {
+                                                                        lista.push(actual.toISOString().split('T')[0]);
+                                                                        actual.setDate(actual.getDate() + 1);
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+
+                                                        return lista;
+                                                    }
+
+                                                    // GUARDADO
+                                                    async function ejecutarEnvio(event) {
+                                                        const celdasSeleccionadas = Array.from(document.querySelectorAll('.chk-celda:checked')).map(c => parseInt(c.value));
+                                                        const fechas = recopilarFechas();
+
+                                                        if (celdasSeleccionadas.length === 0) {
+                                                            alert('Debe seleccionar al menos una celda / workcenter.');
+                                                            event.preventDefault();
+                                                            return false;
+                                                        }
+
+                                                        if (fechas.length === 0) {
+                                                            alert('Debe especificar al menos una fecha de producción.');
+                                                            event.preventDefault();
+                                                            return false;
+                                                        }
+
+                                                        // Si es 1 sola celda y 1 solo día, procesar vía POST normal
+                                                        if (celdasSeleccionadas.length === 1 && fechas.length === 1 && modoFechaActual === 'dia') {
+                                                            return true;
+                                                        }
+
+                                                        // Si son múltiples celdas o varias fechas, procesar vía AJAX
+                                                        event.preventDefault();
+
+                                                        const selTurno = document.querySelector('input[name="TurnoId"]:checked');
+                                                        const turnoId = selTurno ? parseInt(selTurno.value) : 0;
+                                                        const parteId = parseInt(document.getElementById('selParte')?.value || 0);
+                                                        const horas = parseFloat(document.getElementById('txtTiempoEstimado')?.value || 8);
+                                                        const cantidad = parseInt(document.getElementById('txtCantidadProgramada')?.value || 0);
+                                                        const razon = document.getElementById('txtRazonObligatoria')?.value.trim();
+
+                                                        if (!razon) {
+                                                            alert('La razón de la programación es obligatoria.');
+                                                            return false;
+                                                        }
+
+                                                        const btn = document.getElementById('btnSubmitProgramacion');
+                                                        if (btn) {
+                                                            btn.disabled = true;
+                                                            btn.innerText = 'Guardando programación masiva...';
+                                                        }
+
+                                                        const payload = {
+                                                            celdaIds: celdasSeleccionadas,
+                                                            fechas: fechas,
+                                                            turnoId: turnoId,
+                                                            parteId: isNaN(parteId) ? 0 : parteId,
+                                                            horasNetas: isNaN(horas) ? 8 : horas,
+                                                            lotePlaneado: cantidad,
+                                                            razonCambio: razon
+                                                        };
+
+                                                        try {
+                                                            const resp = await fetch('/Programacion/GuardarProgramacionMasiva', {
+                                                                method: 'POST',
+                                                                headers: { 'Content-Type': 'application/json' },
+                                                                body: JSON.stringify(payload)
+                                                            });
+                                                            const res = await resp.json();
+
+                                                            if (res.success) {
+                                                                alert(`✔ ${res.message}`);
+                                                                window.location.href = '/Calendario';
+                                                            } else {
+                                                                alert(`✖ Error: ${res.message}`);
+                                                                if (btn) {
+                                                                    btn.disabled = false;
+                                                                    btn.innerText = 'Guardar Programación';
+                                                                }
+                                                            }
+                                                        } catch (err) {
+                                                            alert(`✖ Error de red: ${err.message}`);
+                                                            if (btn) {
+                                                                btn.disabled = false;
+                                                                btn.innerText = 'Guardar Programación';
+                                                            }
+                                                        }
+
+                                                        return false;
+                                                    }
+
+                                                    function actualizarHorasEstimadas(horas) {
+                                                        const inputHoras = document.getElementById('txtTiempoEstimado');
+                                                        if (inputHoras) {
+                                                            inputHoras.value = horas;
+                                                        }
+                                                    }
+                                                </script>
+                                            }

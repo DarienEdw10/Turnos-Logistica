@@ -30,4 +30,7 @@ public class ProgramacionFormViewModel
     public string RazonObligatoria { get; set; } = string.Empty;
 
     public string Estado { get; set; } = "pendiente";
+    
+    [Display(Name = "Cantidad a Producir (Piezas)")]
+    public int CantidadProgramada { get; set; } = 0;
 }

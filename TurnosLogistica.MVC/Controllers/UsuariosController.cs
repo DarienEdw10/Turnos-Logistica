@@ -25,15 +25,41 @@ public class UsuariosController : Controller
         _logger = logger;
     }
 
-    [HttpGet]
-    public IActionResult Index()
+    private async Task<(int Nivel, string Rol, string CWID)> ObtenerUsuarioActualAsync()
     {
+        string cwid = User?.Identity?.Name ?? Environment.UserName ?? "darienedwin.jimenez";
+        if (cwid.Contains('\\')) cwid = cwid.Split('\\')[1].Trim();
+
+        var u = await _context.Usuarios.FirstOrDefaultAsync(x => x.CWID == cwid || x.NoEmpleado == cwid);
+        int nivel = u?.Nivel ?? 40; // Por defecto 40 si es el usuario simulado de pruebas
+        string rol = u?.Rol ?? (nivel >= 40 ? "sistemas" : (nivel >= 30 ? "admin" : "operador"));
+
+        return (nivel, rol, cwid);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Index()
+    {
+        var (nivel, rol, _) = await ObtenerUsuarioActualAsync();
+
+        // Solo Administradores (30+) y Sistemas (40) tienen acceso a gestionar usuarios
+        if (nivel < 30)
+        {
+            return Forbid();
+        }
+
+        ViewBag.NivelUsuarioActual = nivel;
+        ViewBag.EsSistemas = (rol == "sistemas" || nivel >= 40);
+
         return View();
     }
 
     [HttpGet]
-    public IActionResult BuscarColaboradoresCorporativos(string? query)
+    public async Task<IActionResult> BuscarColaboradoresCorporativos(string? query)
     {
+        var (nivel, _, _) = await ObtenerUsuarioActualAsync();
+        if (nivel < 30) return Forbid();
+
         try
         {
             var empleados = _repositorioEmpleados.ObtenerEmpleados(soloActivos: true);
@@ -45,7 +71,6 @@ public class UsuariosController : Controller
                 {
                     string cwidReal = "";
 
-                    // 1. Extraer desde la colección CWIDs del objeto nativo de la DLL
                     if (e.CWIDs != null)
                     {
                         foreach (var c in e.CWIDs)
@@ -59,7 +84,6 @@ public class UsuariosController : Controller
 
                             string raw = propValor ?? c.ToString() ?? "";
 
-                            // Descartar namespaces de la DLL y hashes largos (>= 30 chars)
                             if (!string.IsNullOrWhiteSpace(raw) &&
                                 !raw.Contains("Magna.Cosma.Autotek") &&
                                 raw.Length < 30)
@@ -70,7 +94,6 @@ public class UsuariosController : Controller
                         }
                     }
 
-                    // 2. Respaldo desde el correo corporativo
                     if (string.IsNullOrWhiteSpace(cwidReal) && e.Correos != null)
                     {
                         var correo = e.Correos.FirstOrDefault(corr => corr != null && !string.IsNullOrWhiteSpace(corr.Direccion));
@@ -92,7 +115,7 @@ public class UsuariosController : Controller
                     {
                         numero = e.NumeroDeEmpleado,
                         nombre = nombreCompleto,
-                       planta = e.Planta.ToString(),
+                        planta = e.Planta.ToString(),
                         cwid = cwidReal
                     };
                 })
@@ -120,14 +143,32 @@ public class UsuariosController : Controller
     [HttpPost]
     public async Task<IActionResult> AsignarNivel([FromBody] AsignarNivelDto dto)
     {
+        var (nivelEjecutor, rolEjecutor, usuarioActual) = await ObtenerUsuarioActualAsync();
+
+        if (nivelEjecutor < 30)
+        {
+            return Forbid();
+        }
+
         if (dto == null || string.IsNullOrWhiteSpace(dto.Cwid) || dto.Nivel < 10)
         {
             return BadRequest(new { success = false, message = "Datos inválidos para asignación de nivel." });
         }
 
-        string cwidLimpio = dto.Cwid.Contains('\\') ? dto.Cwid.Split('\\')[1].Trim() : dto.Cwid.Trim();
-        string usuarioActual = User?.Identity?.Name ?? Environment.UserName ?? "Sistemas";
+        // =========================================================================
+        // REGLA: El Administrador (30) solo asigna niveles menores al suyo (< 30)
+        //        Solo Sistemas (40) puede asignar Nivel 30 (Admin) o Nivel 40 (Sistemas)
+        // =========================================================================
+        if (nivelEjecutor < 40 && dto.Nivel >= nivelEjecutor)
+        {
+            return BadRequest(new 
+            { 
+                success = false, 
+                message = "Permiso denegado: Un Administrador solo puede asignar roles de menor jerarquía (Operador o Jefe de Logística). Solo Sistemas puede asignar Administradores." 
+            });
+        }
 
+        string cwidLimpio = dto.Cwid.Contains('\\') ? dto.Cwid.Split('\\')[1].Trim() : dto.Cwid.Trim();
         int plantaId = ObtenerPlantaActivaId();
 
         string rol = dto.Nivel switch
@@ -145,6 +186,12 @@ public class UsuariosController : Controller
 
             if (usuario != null)
             {
+                // Si el usuario a editar ya tiene un nivel igual o mayor al ejecutor, bloquear si no es Sistemas
+                if (nivelEjecutor < 40 && usuario.Nivel >= nivelEjecutor)
+                {
+                    return BadRequest(new { success = false, message = "No tiene permisos para modificar a un usuario de nivel igual o superior al suyo." });
+                }
+
                 usuario.CWID = cwidLimpio;
                 usuario.Nivel = dto.Nivel;
                 usuario.Rol = rol;
@@ -174,20 +221,13 @@ public class UsuariosController : Controller
                 nivel: Logger.NivelesLog.Detallado,
                 tipo: Logger.TiposLog.Informativo,
                 origen: "UsuariosController.AsignarNivel",
-                texto: $"El usuario [{usuarioActual}] asignó Nivel [{dto.Nivel}] al colaborador [{dto.Nombre}] (CWID: [{dto.Cwid}]).");
+                texto: $"El usuario [{usuarioActual}] ({rolEjecutor}) asignó Nivel [{dto.Nivel}] al colaborador [{dto.Nombre}] (CWID: [{dto.Cwid}]).");
 
-            return Json(new { success = true, message = $"Permisos actualizados para {dto.Nombre} (Nivel {dto.Nivel} - {rol.ToUpper()})." });
+            return Json(new { success = true, message = $"Permisos actualizados para {dto.Nombre} (Rol: {rol.ToUpper()})." });
         }
         catch (Exception ex)
         {
             string detalleError = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
-
-            _logger.Registrar(
-                nivel: Logger.NivelesLog.Basico,
-                tipo: Logger.TiposLog.Errores,
-                origen: "UsuariosController.AsignarNivel",
-                texto: $"Error al asignar nivel a [{dto.Cwid}]: {detalleError}");
-
             return StatusCode(500, new { success = false, message = detalleError });
         }
     }
@@ -200,12 +240,11 @@ public class UsuariosController : Controller
         }
         return 1;
     }
-}
-
-public class AsignarNivelDto
+    public class AsignarNivelDto
 {
     public string Cwid { get; set; } = string.Empty;
     public string NoEmpleado { get; set; } = string.Empty;
     public string Nombre { get; set; } = string.Empty;
     public int Nivel { get; set; }
+}
 }

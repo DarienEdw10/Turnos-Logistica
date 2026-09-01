@@ -1,5 +1,7 @@
 @{
     ViewData["Title"] = "Gestión de Colaboradores y Permisos";
+    bool esSistemas = ViewBag.EsSistemas ?? true;
+    int nivelUsuarioActual = ViewBag.NivelUsuarioActual ?? 40;
 }
 
 <style>
@@ -184,14 +186,26 @@
             <div class="form-group" style="margin-bottom:20px;">
                 <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:6px; text-transform:uppercase;">Nivel de Acceso en Sistema:</label>
                 <select id="ddlNivel" class="form-control" style="padding:10px; font-weight:600;">
-                    <option value="10">Nivel 10 - Consulta (Solo Monitor / Operador)</option>
-                    <option value="20">Nivel 20 - Jefe de Logística (Programación de Turnos)</option>
-                    <option value="30">Nivel 30 - Administrador de Planta (Aprobaciones y Estructura)</option>
-                    <option value="40">Nivel 40 - Sistemas / Superadmin (Total)</option>
+                    <option value="10">Nivel 10 - Operador Logístico (Solo Agenda su Área)</option>
+                    <option value="20">Nivel 20 - Jefe de Logística (Programa y Aprueba)</option>
+                    
+                    @if (esSistemas)
+                    {
+                        <option value="30">Nivel 30 - Administrador de Planta (Acceso Total a su Planta)</option>
+                        <option value="40">Nivel 40 - Sistemas (Superadmin / Solo Roles)</option>
+                    }
                 </select>
+                
                 <div style="font-size:12px; color:var(--text-muted); line-height:1.5; margin-top:12px; padding:10px; background:#f8fafc; border-radius:6px; border:1px solid #e2e8f0;">
-                    <div>* <strong>Nivel 20</strong> permite programar turnos y editar lotes.</div>
-                    <div style="margin-top:2px;">* <strong>Nivel 30+</strong> otorga control sobre catálogos, auditoría y asignación de usuarios.</div>
+                    @if (esSistemas)
+                    {
+                        <div>* <strong>Sistemas:</strong> Puede crear y asignar cualquier rol en la plataforma.</div>
+                    }
+                    else
+                    {
+                        <div>* <strong>Administrador:</strong> Puede otorgar roles a Jefes de Logística (Nivel 20) y Operadores (Nivel 10).</div>
+                        <div style="margin-top:2px; color:#b45309;">* Solo el rol <strong>Sistemas</strong> puede asignar nuevos Administradores.</div>
+                    }
                 </div>
             </div>
 

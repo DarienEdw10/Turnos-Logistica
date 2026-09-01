@@ -150,4 +150,66 @@ public class ProgramacionController : Controller
         }
         return 1;
     }
+ public class ProgramacionMasivaDto
+{
+    public List<int> CeldaIds { get; set; } = new();
+    public List<DateTime> Fechas { get; set; } = new();
+    public int TurnoId { get; set; }
+    public int ParteId { get; set; }
+    public decimal HorasNetas { get; set; }
+    public decimal JphPlaneado { get; set; }
+    public int LotePlaneado { get; set; }
+    public string? RazonCambio { get; set; }
+}
+
+[HttpPost]
+public async Task<IActionResult> GuardarProgramacionMasiva([FromBody] ProgramacionMasivaDto dto)
+{
+    if (dto == null || !dto.CeldaIds.Any() || !dto.Fechas.Any() || dto.TurnoId <= 0)
+    {
+        return BadRequest(new { success = false, message = "Debe seleccionar al menos una celda, una fecha y un turno válido." });
+    }
+
+    int registrosProcesados = 0;
+
+    try
+    {
+        var strategy = _context.Database.CreateExecutionStrategy();
+
+        await strategy.ExecuteAsync(async () =>
+        {
+            foreach (var celdaId in dto.CeldaIds)
+            {
+                foreach (var fecha in dto.Fechas)
+                {
+                    var model = new ProgramacionFormViewModel
+                    {
+                        CeldaId = celdaId,
+                        FechaProduccion = fecha.Date,
+                        TurnoId = dto.TurnoId,
+                        NumeroParteId = dto.ParteId,
+                        TiempoEstimadoHoras = (double)dto.HorasNetas,
+                        CantidadProgramada = dto.LotePlaneado, // <-- Asigna la cantidad escrita
+                        RazonObligatoria = dto.RazonCambio ?? "Programación masiva en lote"
+                    };
+
+                    await _service.GuardarProgramacionAsync(model, usuarioId: 1);
+                    registrosProcesados++;
+                }
+            }
+        });
+
+        return Json(new
+        {
+            success = true,
+            message = $"Programación procesada con éxito ({registrosProcesados} turnos asignados)."
+        });
+    }
+    catch (Exception ex)
+    {
+        string detalle = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
+        return StatusCode(500, new { success = false, message = $"Error al procesar la programación: {detalle}" });
+    }
+}
+
 }
