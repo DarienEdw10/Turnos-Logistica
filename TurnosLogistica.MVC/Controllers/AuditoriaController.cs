@@ -1,19 +1,18 @@
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
-using TurnosLogistica.Domain.Data;
+using TurnosLogistica.Domain.Models;
+using TurnosLogistica.Domain.Repositories;
 using TurnosLogistica.MVC.Models;
 
 namespace TurnosLogistica.MVC.Controllers;
 
 public class AuditoriaController : Controller
 {
-    private readonly AppDbContext _context;
+    private readonly IAuditoriaRepository _auditoriaRepo;
 
-    public AuditoriaController(AppDbContext context)
+    public AuditoriaController(IAuditoriaRepository auditoriaRepo)
     {
-        _context = context;
+        _auditoriaRepo = auditoriaRepo;
     }
 
     [HttpGet]
@@ -41,7 +40,7 @@ public class AuditoriaController : Controller
             return View(vm);
         }
 
-        vm.Registros = await ConsultarHistorialSpAsync(plantaId, fInicio, fFin);
+        vm.Registros = await _auditoriaRepo.ConsultarHistorialAsync(plantaId, fInicio, fFin);
         return View(vm);
     }
 
@@ -57,7 +56,7 @@ public class AuditoriaController : Controller
             return BadRequest("Rango de fechas inválido o mayor a 365 días.");
         }
 
-        var registros = await ConsultarHistorialSpAsync(plantaId, fInicio, fFin);
+        var registros = await _auditoriaRepo.ConsultarHistorialAsync(plantaId, fInicio, fFin);
 
         var sb = new StringBuilder();
         sb.AppendLine("ID,FECHA_HORA,USUARIO,ROL,ACCION,AGENDA_CAMBIO,RAZON");
@@ -71,68 +70,6 @@ public class AuditoriaController : Controller
 
         byte[] buffer = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(sb.ToString())).ToArray();
         return File(buffer, "text/csv", $"Auditoria_Planta{plantaId}_{DateTime.Now:yyyyMMdd_HHmm}.csv");
-    }
-
-    private async Task<List<RegistroAuditoriaDto>> ConsultarHistorialSpAsync(int plantaId, DateTime fechaInicio, DateTime fechaFin)
-    {
-        var lista = new List<RegistroAuditoriaDto>();
-
-        var pPlanta = new SqlParameter("@PlantaId", plantaId);
-        var pInicio = new SqlParameter("@FechaInicio", fechaInicio.ToString("yyyy-MM-dd"));
-        var pFin = new SqlParameter("@FechaFin", fechaFin.ToString("yyyy-MM-dd"));
-
-        string sql = "EXEC mps.SP_ConsultarHistorialAuditoria @PlantaId, @FechaInicio, @FechaFin";
-
-        using var command = _context.Database.GetDbConnection().CreateCommand();
-        command.CommandText = sql;
-        command.Parameters.Add(pPlanta);
-        command.Parameters.Add(pInicio);
-        command.Parameters.Add(pFin);
-
-        await _context.Database.OpenConnectionAsync();
-        using var result = await command.ExecuteReaderAsync();
-
-        while (await result.ReadAsync())
-        {
-            string accion = result["accion"]?.ToString() ?? "ALTA";
-            string accionClase = "t1"; // default
-            string accionBadge = accion.ToUpper();
-
-            if (accionBadge.Contains("CREAC") || accionBadge.Contains("ALTA"))
-            {
-                accionClase = "activo";
-            }
-            else if (accionBadge.Contains("REPROG") || accionBadge.Contains("MODIF"))
-            {
-                accionClase = "t2";
-            }
-            else if (accionBadge.Contains("CANCEL"))
-            {
-                accionClase = "inactivo";
-            }
-
-            string sap = result["sap_part_number"]?.ToString() ?? "";
-            string turno = result["Turno"]?.ToString() ?? "";
-            DateTime fProg = Convert.ToDateTime(result["FechaProgramada"]);
-
-            lista.Add(new RegistroAuditoriaDto
-            {
-                HistorialId = Convert.ToInt64(result["HistorialId"]),
-                FechaAccion = Convert.ToDateTime(result["fecha_accion"]),
-                UsuarioResponsable = result["UsuarioResponsable"]?.ToString() ?? "",
-                RolUsuario = result["RolUsuario"]?.ToString() ?? "",
-                Accion = accion,
-                AccionBadgeClase = accionClase,
-                SapPartNumber = sap,
-                NoDeParte = result["no_de_parte"]?.ToString() ?? "",
-                FechaProgramada = fProg,
-                Turno = turno,
-                AgendaDetalle = $"{sap} / {turno} / {fProg:dd-MMM}",
-                Razon = result["razon"]?.ToString() ?? ""
-            });
-        }
-
-        return lista;
     }
 
     private int ObtenerPlantaActivaId()

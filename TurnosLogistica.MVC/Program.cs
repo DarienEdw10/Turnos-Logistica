@@ -31,6 +31,12 @@ Logger logger = new(logSettings);
 builder.Services.AddSingleton(logger);
 
 // =============================================================
+//  REPOSITORIOS Y ACCESO A DATOS
+// =============================================================
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped<IAuditoriaRepository, AuditoriaRepository>();
+
+// =============================================================
 // 2. CONFIGURACIÓN DE AUTENTICACIÓN Y REPOSITORIO DE EMPLEADOS
 // =============================================================
 SettingsAutentificacion settingsAutentificacion = new();
