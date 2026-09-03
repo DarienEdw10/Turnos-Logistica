@@ -6,7 +6,7 @@
 <div class="page-header">
     <div>
         <div class="page-title">Gestión de Turnos</div>
-        <div class="page-subtitle">Configuración de turnos y duración estimada</div>
+        <div class="page-subtitle">Configuración de turnos, paros programados y tiempo neto efectivo</div>
     </div>
     <button class="btn btn-primary btn-sm" onclick="abrirModalTurno(0)">+ Agregar Turno</button>
 </div>
@@ -20,8 +20,9 @@
                     <th>Nombre</th>
                     <th>Hora Inicio</th>
                     <th>Hora Fin</th>
-                    <th>Factor / Tiempo</th>
-                    <th>Color</th>
+                    <th>Duración Bruta</th>
+                    <th>Paros Ligados</th>
+                    <th>Tiempo Neto</th>
                     <th>Estado</th>
                     <th>Acciones</th>
                 </tr>
@@ -40,7 +41,10 @@
                             </td>
                             <td>@t.Horas hrs</td>
                             <td>
-                                <div style="width:24px;height:24px;background:var(--@t.ClaseColor);border-radius:4px"></div>
+                                <span class="badge badge-encurso">@(t.TotalMinutosParo ?? 0) min</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-programado" style="font-weight:700;">@(t.TiempoNetoHoras ?? t.Horas) hrs</span>
                             </td>
                             <td>
                                 @if (t.Activo)
@@ -61,7 +65,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="8" style="padding:24px; text-align:center; color:var(--text-muted);">
+                        <td colspan="9" style="padding:24px; text-align:center; color:var(--text-muted);">
                             No hay turnos configurados para esta planta.
                         </td>
                     </tr>
@@ -71,16 +75,16 @@
     </div>
 </div>
 
-<!-- MODAL FLOTANTE: AGREGAR / EDITAR TURNO -->
+<!-- MODAL FLOTANTE: AGREGAR / EDITAR TURNO CON PAROS DINÁMICOS -->
 <div id="modalTurnoOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:250; align-items:center; justify-content:center;">
-    <div style="background:var(--surface); border-radius:12px; padding:24px; width:100%; max-width:460px; box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+    <div style="background:var(--surface); border-radius:12px; padding:24px; width:100%; max-width:620px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.25);">
         
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
             <h3 id="modalTurnoTitle" style="font-size:16px; font-weight:700; margin:0;">Agregar Turno</h3>
             <button type="button" onclick="cerrarModalTurno()" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--text-muted);">&times;</button>
         </div>
 
-        <form asp-controller="Turnos" asp-action="Guardar" method="post">
+        <form id="formTurno" asp-controller="Turnos" asp-action="Guardar" method="post" onsubmit="return validarEnvioTurno()">
             @Html.AntiForgeryToken()
             <input type="hidden" id="turnoId" name="id" value="0" />
 
@@ -92,11 +96,55 @@
             <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
                 <div class="form-group">
                     <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">HORA INICIO *</label>
-                    <input type="time" id="turnoHoraInicio" name="horaInicio" required />
+                    <input type="time" id="turnoHoraInicio" name="horaInicio" required onchange="recalcularTiempos()" />
                 </div>
                 <div class="form-group">
                     <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">HORA FIN *</label>
-                    <input type="time" id="turnoHoraFin" name="horaFin" required />
+                    <input type="time" id="turnoHoraFin" name="horaFin" required onchange="recalcularTiempos()" />
+                </div>
+            </div>
+
+            <!-- RESUMEN DE TIEMPOS DINÁMICOS -->
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:16px; background:var(--surface2); padding:10px 12px; border-radius:8px;">
+                <div>
+                    <span style="font-size:10px; color:var(--text-muted); font-weight:700; display:block;">DURACIÓN BRUTA</span>
+                    <div id="lblDuracionBruta" style="font-size:14px; font-weight:800; color:var(--text);">0.00 h</div>
+                </div>
+                <div>
+                    <span style="font-size:10px; color:var(--warning); font-weight:700; display:block;">TOTAL PAROS</span>
+                    <div id="lblTotalParos" style="font-size:14px; font-weight:800; color:var(--warning);">0 min</div>
+                </div>
+                <div>
+                    <span style="font-size:10px; color:var(--success); font-weight:700; display:block;">TIEMPO NETO</span>
+                    <div id="lblTiempoNeto" style="font-size:14px; font-weight:800; color:var(--success);">0.00 h</div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN DE PAROS PROGRAMADOS LIGADOS -->
+            <div style="margin-bottom:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <label style="font-size:11px; font-weight:700; color:var(--text-muted); margin:0;">PAROS ASOCIADOS AL TURNO</label>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="agregarFilaParo()">+ Agregar Paro</button>
+                </div>
+
+                <div class="table-wrap">
+                    <table style="font-size:12px;">
+                        <thead>
+                            <tr style="background:var(--surface2);">
+                                <th>Motivo / Razón</th>
+                                <th style="width:110px;">Duración (min)</th>
+                                <th style="width:130px;">Tipo</th>
+                                <th style="width:40px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaParosBody">
+                            <!-- Filas dinámicas generadas vía JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="alertaExceso" style="display:none; color:var(--danger); font-size:11.5px; font-weight:700; margin-top:8px;">
+                    ⚠ El tiempo acumulado de paros excede o anula la duración bruta del turno.
                 </div>
             </div>
 
@@ -107,9 +155,9 @@
                 </label>
             </div>
 
-            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px;">
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px; border-top:1px solid var(--border); padding-top:14px;">
                 <button type="button" class="btn btn-secondary" onclick="cerrarModalTurno()">Cancelar</button>
-                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                <button type="submit" id="btnGuardarTurno" class="btn btn-primary">Guardar Turno</button>
             </div>
         </form>
     </div>
@@ -117,6 +165,8 @@
 
 @section Scripts {
     <script>
+        let indexParo = 0;
+
         function cerrarModalTurno() {
             const m = document.getElementById('modalTurnoOverlay');
             if (m) m.style.display = 'none';
@@ -125,15 +175,22 @@
         function abrirModalTurno(id) {
             const overlay = document.getElementById('modalTurnoOverlay');
             const title = document.getElementById('modalTurnoTitle');
+            const tbody = document.getElementById('listaParosBody');
+            tbody.innerHTML = '';
+            indexParo = 0;
 
             if (id === 0) {
                 title.innerText = 'Agregar Turno';
                 document.getElementById('turnoId').value = 0;
                 document.getElementById('turnoNombre').value = '';
-                document.getElementById('turnoHoraInicio').value = '';
-                document.getElementById('turnoHoraFin').value = '';
+                document.getElementById('turnoHoraInicio').value = '06:00';
+                document.getElementById('turnoHoraFin').value = '14:00';
                 document.getElementById('turnoActivo').checked = true;
+                
+                // Paro por defecto (ej. Comedor 30 min)
+                agregarFilaParo('Comedor / Alimentos', 30, true);
                 overlay.style.display = 'flex';
+                recalcularTiempos();
             } else {
                 title.innerText = 'Editar Turno';
                 fetch(`/Turnos/ObtenerTurno?id=${id}`)
@@ -144,9 +201,111 @@
                         document.getElementById('turnoHoraInicio').value = data.horaInicio;
                         document.getElementById('turnoHoraFin').value = data.horaFin;
                         document.getElementById('turnoActivo').checked = data.activo;
+
+                        if (data.paros && data.paros.length > 0) {
+                            data.paros.forEach(p => {
+                                agregarFilaParo(p.tipoParo, p.duracionMinutos, p.esProgramado, p.id);
+                            });
+                        }
                         overlay.style.display = 'flex';
+                        recalcularTiempos();
                     });
             }
+        }
+
+        function agregarFilaParo(motivo = '', minutos = 15, esProgramado = true, paroId = 0) {
+            const tbody = document.getElementById('listaParosBody');
+            const tr = document.createElement('tr');
+            tr.className = 'fila-paro';
+            tr.innerHTML = `
+                <td>
+                    <input type="hidden" name="Paros[${indexParo}].Id" value="${paroId}" />
+                    <input type="text" name="Paros[${indexParo}].TipoParo" class="form-control form-control-sm paro-motivo" placeholder="Ej. Comedor / Junta" value="${motivo}" required style="padding:4px 8px; font-size:12px;" />
+                </td>
+                <td>
+                    <input type="number" name="Paros[${indexParo}].DuracionMinutos" class="form-control form-control-sm paro-minutos" min="1" value="${minutos}" oninput="recalcularTiempos()" required style="padding:4px 8px; font-size:12px;" />
+                </td>
+                <td>
+                    <select name="Paros[${indexParo}].EsProgramado" class="form-select form-select-sm" style="padding:4px 8px; font-size:12px;">
+                        <option value="true" ${esProgramado ? 'selected' : ''}>Programado</option>
+                        <option value="false" ${!esProgramado ? 'selected' : ''}>No Programado</option>
+                    </select>
+                </td>
+                <td style="text-align:center;">
+                    <button type="button" class="btn btn-danger btn-sm" style="padding:2px 6px; font-size:11px;" onclick="eliminarFilaParo(this)">✕</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+            indexParo++;
+            recalcularTiempos();
+        }
+
+        function eliminarFilaParo(btn) {
+            btn.closest('tr').remove();
+            recalcularTiempos();
+        }
+
+        function obtenerMinutosBrutosTurno() {
+            const hIni = document.getElementById('turnoHoraInicio').value;
+            const hFin = document.getElementById('turnoHoraFin').value;
+            if (!hIni || !hFin) return 0;
+
+            const [h1, m1] = hIni.split(':').map(Number);
+            const [h2, m2] = hFin.split(':').map(Number);
+
+            let tInicioMin = h1 * 60 + m1;
+            let tFinMin = h2 * 60 + m2;
+
+            if (tFinMin <= tInicioMin) {
+                tFinMin += 24 * 60; // Cruce de medianoche
+            }
+
+            return tFinMin - tInicioMin;
+        }
+
+        function recalcularTiempos() {
+            const duracionBrutaMin = obtenerMinutosBrutosTurno();
+            const duracionBrutaHoras = (duracionBrutaMin / 60).toFixed(2);
+            document.getElementById('lblDuracionBruta').innerText = `${duracionBrutaHoras} h`;
+
+            let inputsMinutos = document.querySelectorAll('.paro-minutos');
+            let totalParoMinutos = 0;
+            inputsMinutos.forEach(input => {
+                let val = parseInt(input.value) || 0;
+                if (val > 0) totalParoMinutos += val;
+            });
+
+            let tiempoNetoMinutos = duracionBrutaMin - totalParoMinutos;
+            let alerta = document.getElementById('alertaExceso');
+            let btnGuardar = document.getElementById('btnGuardarTurno');
+
+            document.getElementById('lblTotalParos').innerText = `${totalParoMinutos} min (${(totalParoMinutos / 60).toFixed(2)} h)`;
+
+            if (tiempoNetoMinutos <= 0 && duracionBrutaMin > 0) {
+                alerta.style.display = 'block';
+                btnGuardar.disabled = true;
+                document.getElementById('lblTiempoNeto').style.color = 'var(--danger)';
+                document.getElementById('lblTiempoNeto').innerText = '0.00 h (Inválido)';
+            } else {
+                alerta.style.display = 'none';
+                btnGuardar.disabled = false;
+                document.getElementById('lblTiempoNeto').style.color = 'var(--success)';
+                document.getElementById('lblTiempoNeto').innerText = `${(tiempoNetoMinutos / 60).toFixed(2)} h`;
+            }
+        }
+
+        function validarEnvioTurno() {
+            const duracionBrutaMin = obtenerMinutosBrutosTurno();
+            let totalParoMinutos = 0;
+            document.querySelectorAll('.paro-minutos').forEach(input => {
+                totalParoMinutos += parseInt(input.value) || 0;
+            });
+
+            if (duracionBrutaMin - totalParoMinutos <= 0) {
+                alert('No se puede guardar el turno: el tiempo neto de corrida no puede ser menor o igual a cero.');
+                return false;
+            }
+            return true;
         }
     </script>
 }

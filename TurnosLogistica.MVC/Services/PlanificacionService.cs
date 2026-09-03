@@ -69,14 +69,14 @@ public class PlanificacionService : IPlanificacionService
         await _parteRepo.FindAsync(p => p.PlantaId == plantaId && p.Activo);
 
     public async Task<CalendarioViewModel> ObtenerCalendarioAsync(
-        int plantaId,
-        string agrupacion,
-        string granularidad,
-        int mes,
-        int anio,
-        string? filtroLinea = null,
-        string? filtroCelda = null,
-        string? filtroTurno = null)
+      int plantaId,
+      string agrupacion,
+      string granularidad,
+      int mes,
+      int anio,
+      string? filtroLinea = null,
+      string? filtroCelda = null,
+      string? filtroTurno = null)
     {
         // 1. Determinar el rango de fechas según granularidad
         DateTime fechaBase = new DateTime(anio, mes, 1);
@@ -90,7 +90,6 @@ public class PlanificacionService : IPlanificacionService
         }
         else if (granularidad == "semanal")
         {
-            // Obtener el lunes de la semana actual del mes
             int delta = DayOfWeek.Monday - DateTime.Today.DayOfWeek;
             if (delta > 0) delta -= 7;
             fechaInicio = DateTime.Today.AddDays(delta);
@@ -123,10 +122,9 @@ public class PlanificacionService : IPlanificacionService
                            CeldaCodigo = celda != null ? celda.Codigo : "C-101",
                            parte.SapPartNumber,
                            TurnoNombre = turno.Nombre,
-                           TurnoHoraInicio = turno.HoraInicio,
-                           TurnoHoraFin = turno.HoraFin,
                            Estado = prog.Estatus,
-                           Cantidad = prog.CantidadProgramada
+                           Cantidad = prog.CantidadProgramada,
+                           HorasProgramadas = prog.HorasProgramadas // <-- Proyectamos las horas guardadas
                        };
 
         // Filtros
@@ -141,20 +139,15 @@ public class PlanificacionService : IPlanificacionService
 
         var data = await rawQuery.ToListAsync();
 
-        // 3. Mapeo en memoria y consolidación según la agrupación solicitada
+        // 3. Mapeo en memoria según la agrupación:
         List<EventoCalendarioDto> eventos;
 
         if (agrupacion == "proyecto")
         {
-            // Agrupa por Fecha, Turno y Proyecto sumando horas y piezas
             eventos = data.GroupBy(d => new { d.Fecha, d.TurnoNombre, d.ProyectoCodigo })
                 .Select(g =>
                 {
                     var primerItem = g.First();
-                    double duracion = primerItem.TurnoHoraFin <= primerItem.TurnoHoraInicio
-                        ? (primerItem.TurnoHoraFin.Add(TimeSpan.FromDays(1)) - primerItem.TurnoHoraInicio).TotalHours
-                        : (primerItem.TurnoHoraFin - primerItem.TurnoHoraInicio).TotalHours;
-
                     return new EventoCalendarioDto
                     {
                         Id = primerItem.Id,
@@ -165,22 +158,17 @@ public class PlanificacionService : IPlanificacionService
                         SapPartNumber = $"{g.Count()} Partes",
                         TurnoClave = g.Key.TurnoNombre,
                         Estado = primerItem.Estado,
-                        Horas = Math.Round(duracion, 1),
+                        Horas = (double)Math.Round(g.Sum(x => x.HorasProgramadas), 1), // <-- Suma real
                         Cantidad = g.Sum(x => x.Cantidad)
                     };
                 }).ToList();
         }
         else if (agrupacion == "linea")
         {
-            // Agrupa por Fecha, Turno y Línea
             eventos = data.GroupBy(d => new { d.Fecha, d.TurnoNombre, d.ProyectoCodigo, d.LineaNombre })
                 .Select(g =>
                 {
                     var primerItem = g.First();
-                    double duracion = primerItem.TurnoHoraFin <= primerItem.TurnoHoraInicio
-                        ? (primerItem.TurnoHoraFin.Add(TimeSpan.FromDays(1)) - primerItem.TurnoHoraInicio).TotalHours
-                        : (primerItem.TurnoHoraFin - primerItem.TurnoHoraInicio).TotalHours;
-
                     return new EventoCalendarioDto
                     {
                         Id = primerItem.Id,
@@ -191,22 +179,17 @@ public class PlanificacionService : IPlanificacionService
                         SapPartNumber = $"{g.Count()} Partes",
                         TurnoClave = g.Key.TurnoNombre,
                         Estado = primerItem.Estado,
-                        Horas = Math.Round(duracion, 1),
+                        Horas = (double)Math.Round(g.Sum(x => x.HorasProgramadas), 1),
                         Cantidad = g.Sum(x => x.Cantidad)
                     };
                 }).ToList();
         }
         else if (agrupacion == "celda")
         {
-            // Agrupa por Fecha, Turno y Celda
             eventos = data.GroupBy(d => new { d.Fecha, d.TurnoNombre, d.ProyectoCodigo, d.LineaNombre, d.CeldaCodigo })
                 .Select(g =>
                 {
                     var primerItem = g.First();
-                    double duracion = primerItem.TurnoHoraFin <= primerItem.TurnoHoraInicio
-                        ? (primerItem.TurnoHoraFin.Add(TimeSpan.FromDays(1)) - primerItem.TurnoHoraInicio).TotalHours
-                        : (primerItem.TurnoHoraFin - primerItem.TurnoHoraInicio).TotalHours;
-
                     return new EventoCalendarioDto
                     {
                         Id = primerItem.Id,
@@ -217,32 +200,25 @@ public class PlanificacionService : IPlanificacionService
                         SapPartNumber = $"{g.Count()} Partes",
                         TurnoClave = g.Key.TurnoNombre,
                         Estado = primerItem.Estado,
-                        Horas = Math.Round(duracion, 1),
+                        Horas = (double)Math.Round(g.Sum(x => x.HorasProgramadas), 1),
                         Cantidad = g.Sum(x => x.Cantidad)
                     };
                 }).ToList();
         }
-        else // "parte" -> Máximo nivel de detalle (1 tarjeta por número de parte)
+        else // "parte"
         {
-            eventos = data.Select(d =>
+            eventos = data.Select(d => new EventoCalendarioDto
             {
-                double duracion = d.TurnoHoraFin <= d.TurnoHoraInicio
-                    ? (d.TurnoHoraFin.Add(TimeSpan.FromDays(1)) - d.TurnoHoraInicio).TotalHours
-                    : (d.TurnoHoraFin - d.TurnoHoraInicio).TotalHours;
-
-                return new EventoCalendarioDto
-                {
-                    Id = d.Id,
-                    Fecha = d.Fecha,
-                    ProyectoCodigo = d.ProyectoCodigo,
-                    LineaNombre = d.LineaNombre,
-                    CeldaCodigo = d.CeldaCodigo,
-                    SapPartNumber = d.SapPartNumber,
-                    TurnoClave = d.TurnoNombre,
-                    Estado = d.Estado,
-                    Horas = Math.Round(duracion, 1),
-                    Cantidad = d.Cantidad
-                };
+                Id = d.Id,
+                Fecha = d.Fecha,
+                ProyectoCodigo = d.ProyectoCodigo,
+                LineaNombre = d.LineaNombre,
+                CeldaCodigo = d.CeldaCodigo,
+                SapPartNumber = d.SapPartNumber,
+                TurnoClave = d.TurnoNombre,
+                Estado = d.Estado,
+                Horas = (double)Math.Round(d.HorasProgramadas, 1),
+                Cantidad = d.Cantidad
             }).ToList();
         }
 
@@ -283,7 +259,6 @@ public class PlanificacionService : IPlanificacionService
     {
         int parteId = model.NumeroParteId > 0 ? model.NumeroParteId : 1;
 
-        // Si el usuario especificó la cantidad, se usa esa; de lo contrario se calcula con base en JPH
         int cantidadFinal = model.CantidadProgramada;
         if (cantidadFinal <= 0)
         {
@@ -292,7 +267,7 @@ public class PlanificacionService : IPlanificacionService
             decimal oa = (parte?.OA ?? 100m) / 100m;
             decimal horas = (decimal)model.TiempoEstimadoHoras;
             cantidadFinal = (int)Math.Round(horas * jph * oa);
-            if (cantidadFinal <= 0) cantidadFinal = 400; // Fallback de seguridad
+            if (cantidadFinal <= 0) cantidadFinal = 400;
         }
 
         var nuevaProg = new ProgramacionProduccion
@@ -300,7 +275,8 @@ public class PlanificacionService : IPlanificacionService
             NumeroParteId = parteId,
             Fecha = model.FechaProduccion.Date,
             TurnoId = model.TurnoId,
-            CantidadProgramada = cantidadFinal, // <-- ¡Valor dinámico real sin hardcode!
+            CantidadProgramada = cantidadFinal,
+            HorasProgramadas = (decimal)model.TiempoEstimadoHoras, // <-- Guardamos las horas reales ingresadas (ej. 4.0)
             OrdenProducir = 1,
             VentanasSalida = 4,
             Estatus = "pendiente",
@@ -318,7 +294,7 @@ public class PlanificacionService : IPlanificacionService
             fecha = nuevaProg.Fecha.ToString("yyyy-MM-dd"),
             turno_id = nuevaProg.TurnoId,
             numero_parte_id = nuevaProg.NumeroParteId,
-            horas = model.TiempoEstimadoHoras,
+            horas = nuevaProg.HorasProgramadas,
             cantidad = nuevaProg.CantidadProgramada,
             estatus = nuevaProg.Estatus
         });

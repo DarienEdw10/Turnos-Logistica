@@ -23,21 +23,33 @@ public class EstructuraController : Controller
         var planta = await _context.Plantas.FindAsync(plantaId);
         string plantaNombre = planta != null ? $"{planta.Nombre} — {planta.Codigo}" : "Planta";
 
-        // 1. Cargar datos de la planta activa
+        // 1. Cargar datos reales de la planta activa
         var proyectosDb = await _context.Proyectos
             .Where(p => p.PlantaId == plantaId && p.Activo)
+            .OrderBy(p => p.Codigo)
             .ToListAsync();
 
         var lineasDb = await _context.Lineas
             .Where(l => l.PlantaId == plantaId && l.Activa)
+            .OrderBy(l => l.Nombre)
             .ToListAsync();
 
         var celdasDb = await (from c in _context.Celdas
                               join l in _context.Lineas on c.LineaId equals l.Id
                               where l.PlantaId == plantaId && c.Activa
+                              orderby c.Codigo
                               select c).ToListAsync();
 
-        // 2. Jerarquía
+        var celdaIds = celdasDb.Select(c => c.Id).ToList();
+
+        // Cargar únicamente las estaciones reales registradas en SQL Server
+        var estacionesDb = await _context.Estaciones
+            .AsNoTracking()
+            .Where(e => celdaIds.Contains(e.CeldaId) && e.Activa)
+            .OrderBy(e => e.Codigo)
+            .ToListAsync();
+
+        // 2. Jerarquía fiel a la base de datos
         var proyectosDto = proyectosDb.Select(p => new ProyectoNodoDto
         {
             Id = p.Id,
@@ -53,7 +65,11 @@ public class EstructuraController : Controller
                     Id = c.Id,
                     Codigo = c.Codigo,
                     Nombre = c.Nombre,
-                    Estaciones = new List<string> { "EST-01 Carga", "EST-02 Ensamble / Soldadura", "EST-03 Descarga / Calidad" }
+                    // CORREGIDO: Cargar solo estaciones reales de BD
+                    Estaciones = estacionesDb
+                        .Where(e => e.CeldaId == c.Id)
+                        .Select(e => $"{e.Codigo} — {e.Nombre}")
+                        .ToList()
                 }).ToList()
             }).ToList()
         }).ToList();
@@ -66,10 +82,9 @@ public class EstructuraController : Controller
                                Texto = $"{c.Codigo} — {c.Nombre} ({l.Nombre ?? l.Codigo})"
                            }).ToList();
 
-        // Pasar proyectos y líneas para el modal
         ViewBag.ProyectosJson = proyectosDb.Select(p => new { id = p.Id, texto = p.Codigo + " — " + p.Nombre }).ToList();
         ViewBag.LineasJson = lineasDb.Select(l => new { id = l.Id, texto = (l.Nombre ?? l.Codigo) + " (Línea)" }).ToList();
-
+        ViewBag.CeldasJson = celdasDb.Select(c => new { id = c.Id, texto = c.Codigo + " — " + c.Nombre }).ToList();
         var vm = new EstructuraViewModel
         {
             PlantaId = plantaId,
@@ -129,9 +144,105 @@ public class EstructuraController : Controller
         {
             _context.Celdas.Add(new Celda { LineaId = padreId, Nombre = nombre, Codigo = codigo, Activa = true });
         }
+        else if (tipoNodo == "estacion")
+        {
+            _context.Estaciones.Add(new Estacion
+            {
+                CeldaId = padreId,
+                Nombre = nombre,
+                Codigo = codigo,
+                Activa = true
+            });
+        }
 
         await _context.SaveChangesAsync();
         return RedirectToAction(nameof(Index));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ObtenerWorkCentersPorLinea(int lineaId)
+    {
+        if (lineaId <= 0)
+            return Json(new { workCenters = new List<string>(), sugerido = "" });
+
+        var codigosExistentes = await _context.Celdas
+            .AsNoTracking()
+            .Where(c => c.LineaId == lineaId && c.Activa)
+            .OrderBy(c => c.Codigo)
+            .Select(c => c.Codigo)
+            .Distinct()
+            .ToListAsync();
+
+        var partesCeldaIds = await _context.NumerosDeParte
+            .AsNoTracking()
+            .Where(np => np.LineaId == lineaId && np.CeldaId != null)
+            .Select(np => np.CeldaId!.Value)
+            .Distinct()
+            .ToListAsync();
+
+        var codigosDesdePartes = await _context.Celdas
+            .AsNoTracking()
+            .Where(c => partesCeldaIds.Contains(c.Id))
+            .Select(c => c.Codigo)
+            .Distinct()
+            .ToListAsync();
+
+        var todosLosWorkCenters = codigosExistentes
+            .Union(codigosDesdePartes)
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .OrderBy(c => c)
+            .ToList();
+
+        string codigoSugerido = todosLosWorkCenters.FirstOrDefault() ?? "";
+
+        return Json(new
+        {
+            workCenters = todosLosWorkCenters,
+            sugerido = codigoSugerido
+        });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ObtenerProyectosPorPlanta()
+    {
+        int plantaId = ObtenerPlantaActivaId();
+
+        var proyectos = await _context.Proyectos
+            .AsNoTracking()
+            .Where(p => p.PlantaId == plantaId && p.Activo)
+            .OrderBy(p => p.Codigo)
+            .Select(p => new
+            {
+                id = p.Id,
+                codigo = p.Codigo,
+                nombre = p.Nombre,
+                texto = $"{p.Codigo} — {p.Nombre}"
+            })
+            .ToListAsync();
+
+        return Json(proyectos);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ObtenerLineasPorProyecto(int proyectoId)
+    {
+        if (proyectoId <= 0)
+            return Json(new List<object>());
+
+        var lineas = await _context.Lineas
+            .AsNoTracking()
+            .Where(l => l.ProyectoId == proyectoId && l.Activa)
+            .OrderBy(l => l.Nombre)
+            .Select(l => new
+            {
+                id = l.Id,
+                codigo = l.Codigo ?? "",
+                nombre = l.Nombre,
+                texto = $"{l.Nombre} ({(string.IsNullOrEmpty(l.Codigo) ? "S/C" : l.Codigo)})"
+            })
+            .ToListAsync();
+
+        return Json(lineas);
     }
 
     private int ObtenerPlantaActivaId()

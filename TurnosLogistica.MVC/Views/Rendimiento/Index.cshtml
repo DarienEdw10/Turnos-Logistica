@@ -1,0 +1,504 @@
+@model TurnosLogistica.MVC.Models.RendimientoTurnoViewModel
+@{
+    ViewData["Title"] = "Rendimiento y Cierre de Turno";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Rendimiento de Producción</div>
+        <div class="page-subtitle">Balance de tiempo bruto vs. tiempo neto real y cumplimiento de piezas</div>
+    </div>
+    <div style="display:flex; gap:8px;">
+        <a class="btn btn-secondary" asp-action="ExportarCsv" asp-route-fecha="@Model.Fecha.ToString("yyyy-MM-dd")"
+           asp-route-turno="@Model.FiltroTurno" asp-route-linea="@Model.FiltroLinea">
+            📥 Exportar a Excel (CSV)
+        </a>
+    </div>
+</div>
+
+<!-- BARRA DE FILTROS -->
+<form method="get" asp-action="Index" class="filter-bar">
+    <div class="filter-group">
+        <label>Fecha</label>
+        <input type="date" name="fecha" value="@Model.Fecha.ToString("yyyy-MM-dd")" onchange="this.form.submit()" />
+    </div>
+
+    <div class="filter-group">
+        <label>Turno</label>
+        <select name="turno" onchange="this.form.submit()">
+            <option value="Todos">Todos</option>
+            @foreach (var t in Model.TurnosDisponibles)
+            {
+                <option value="@t" selected="@(Model.FiltroTurno == t)">@t</option>
+            }
+        </select>
+    </div>
+
+    <div class="filter-group">
+        <label>Línea</label>
+        <select name="linea" onchange="this.form.submit()">
+            <option value="Todas">Todas</option>
+            @foreach (var l in Model.LineasDisponibles)
+            {
+                <option value="@l" selected="@(Model.FiltroLinea == l)">@l</option>
+            }
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-sm">Consultar</button>
+</form>
+
+<!-- CARDS DE CONSOLIDADO GENERAL DEL DÍA -->
+<div class="stats-row" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+    <div class="stat-card">
+        <div class="stat-label">Horas Planeadas</div>
+        <div class="stat-value">@Model.TotalHorasProgramadas h</div>
+        <div class="stat-sub">Tiempo bruto en piso</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-label" style="color:var(--danger);">Downtime / Paros</div>
+        <div class="stat-value" style="color:var(--danger);">@Model.TotalHorasParos h</div>
+        <div class="stat-sub">@Model.TotalMinutosParos min acumulados</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-label" style="color:var(--success);">Tiempo Neto Real</div>
+        <div class="stat-value" style="color:var(--success);">@Model.TotalHorasEfectivas h</div>
+        <div class="stat-sub">Disponibilidad: @Model.EficienciaGeneralPct%</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-label" style="color:var(--accent);">Meta vs. Producido</div>
+        <div class="stat-value" style="color:var(--accent);">@Model.TotalPiezasTerminadas.ToString("N0")</div>
+        <div class="stat-sub">de @Model.TotalPiezasProgramadas.ToString("N0") pzas programadas</div>
+    </div>
+</div>
+
+<!-- TABLA DE DETALLE OPERATIVO -->
+<div class="card" style="padding:0;">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Turno</th>
+                    <th>Proyecto</th>
+                    <th>Línea / Celda</th>
+                    <th>No. Parte</th>
+                    <th>Estatus</th>
+                    <th>T. Bruto</th>
+                    <th>Paro Prog.</th>
+                    <th>Fallas/Incidencias</th>
+                    <th>T. Efectivo</th>
+                    <th>Piezas (Term / Prog)</th>
+                    <th>Cumplimiento</th>
+                    <th style="width:80px; text-align:center;">Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Items != null && Model.Items.Any())
+                {
+                    @foreach (var row in Model.Items)
+                    {
+                        string estatusNorm = (row.Estatus ?? "pendiente").ToLowerInvariant();
+                        string badgeClass = estatusNorm switch
+                        {
+                            "terminado" or "completado" => "badge-terminado",
+                            "activo" or "en_proceso" or "en proceso" => "badge-encurso",
+                            "cancelado" => "badge-cancelado",
+                            _ => "badge-programado"
+                        };
+
+                        <tr>
+                            <td><strong style="color:var(--accent);">@row.TurnoClave</strong></td>
+                            <td><strong>@row.ProyectoCodigo</strong></td>
+                            <td>@row.LineaNombre / @row.CeldaCodigo</td>
+                            <td><code>@row.SapPartNumber</code></td>
+                            <td>
+                                <span class="badge @badgeClass">@row.Estatus</span>
+                            </td>
+                            <td>@row.HorasProgramadas.ToString("N2") h</td>
+                            <td style="color:var(--warning);">@row.MinutosParoProgramados min</td>
+                            <td style="color:var(--danger); font-weight:700;">@row.MinutosParoNoProgramados min</td>
+                            <td><strong style="color:var(--success);">@row.HorasEfectivas.ToString("N2") h</strong></td>
+                            <td>
+                                <strong>@row.PiezasTerminadas.ToString("N0")</strong> / @row.PiezasProgramadas.ToString("N0")
+                            </td>
+                            <td>
+                                <div style="display:flex; align-items:center; gap:6px;">
+                                    <div
+                                        style="flex:1; background:var(--surface2); height:6px; border-radius:3px; overflow:hidden; min-width:55px;">
+                                        <div
+                                            style="width:@Math.Min(100, row.CumplimientoPiezasPct)%; background:@(row.CumplimientoPiezasPct >= 95 ? "var(--success)" : (row.CumplimientoPiezasPct >= 70 ? "var(--warning)" : "var(--danger)")); height:100%;">
+                                        </div>
+                                    </div>
+                                    <span style="font-size:11px; font-weight:700;">@row.CumplimientoPiezasPct%</span>
+                                </div>
+                            </td>
+
+                            <!-- Botón que abre el modal directo para este registro específico -->
+                            <td style="text-align:center;">
+                                <button type="button" class="btn btn-secondary btn-sm"
+                                        style="padding:3px 8px; font-size:11.5px; font-weight:600;"
+                                        onclick="abrirModalParos(@row.ProgramacionId, '@row.ProyectoCodigo', '@row.LineaNombre', '@row.CeldaCodigo', @row.HorasProgramadas, '@row.SapPartNumber', '@row.Estatus', @row.PiezasTerminadas, @row.PiezasProgramadas)">
+                                    ⚙ Paros
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="12" style="text-align:center; padding:30px; color:var(--text-muted);">
+                            No hay órdenes de producción programadas para esta fecha o filtros seleccionados.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+<!-- CONTENEDOR FLOTANTE PARA MENSAJES TOAST -->
+<div id="toastNotificacion"
+     style="display:none; position:fixed; top:24px; right:24px; z-index:9999; min-width:320px; padding:14px 18px; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,0.25); font-size:13px; font-weight:600; display:none; align-items:center; gap:10px; transition: all 0.3s ease;">
+    <span id="toastIcono" style="font-size:18px;"></span>
+    <span id="toastMensaje"></span>
+</div>
+<!-- MODAL DE AUDITORÍA, CIERRE Y GESTIÓN DE PAROS -->
+<div id="modalParosOverlay"
+     style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:300; align-items:center; justify-content:center; padding:16px;">
+    <div
+        style="background:var(--surface); border-radius:12px; padding:24px; width:100%; max-width:620px; max-height:92vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+
+        <!-- Cabecera del Modal -->
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">
+            <div>
+                <h3 id="modalProgTitulo" style="font-size:16px; font-weight:700; margin:0; color:var(--text);">Cierre y
+                    Paros de Producción</h3>
+                    <span id="modalProgSubtitulo" style="font-size:12px; color:var(--text-muted);">Proyecto - Línea /
+                        Celda</span>
+                    </div>
+                    <button type="button" onclick="cerrarModalParos()"
+                            style="background:none; border:none; font-size:22px; cursor:pointer; color:var(--text-muted);">&times;</button>
+                </div>
+
+                <!-- Ficha Resumen de Tiempos -->
+                <div
+                    style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:14px; background:var(--surface2); padding:12px; border-radius:8px;">
+                    <div>
+                        <span style="font-size:10px; color:var(--text-muted); font-weight:700; display:block;">HORAS
+                            TURNO</span>
+                            <div id="lblModalHorasProg" style="font-size:14px; font-weight:800; color:var(--text);">0.00 h</div>
+                        </div>
+                        <div>
+                            <span style="font-size:10px; color:var(--warning); font-weight:700; display:block;">TOTAL PAROS</span>
+                            <div id="lblModalTotalParos" style="font-size:14px; font-weight:800; color:var(--warning);">0 min</div>
+                        </div>
+                        <div>
+                            <span style="font-size:10px; color:var(--success); font-weight:700; display:block;">TIEMPO
+                                EFECTIVO</span>
+                                <div id="lblModalTiempoNeto" style="font-size:14px; font-weight:800; color:var(--success);">0.00 h</div>
+                            </div>
+                        </div>
+
+                        <form id="formParosProyecto" onsubmit="guardarAuditoriaProyecto(event)">
+                            <input type="hidden" id="modalProgId" name="programacionId" value="0" />
+
+                            <!-- Sección de Cierre: Estatus y Piezas Reales -->
+                            <div
+                                style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; background:var(--surface2); padding:12px; border-radius:8px;">
+                                <div>
+                                    <label
+                                        style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">ESTATUS
+                                        DE PRODUCCIÓN</label>
+                                        <select id="modalEstatus" class="form-select form-select-sm"
+                                                style="width:100%; font-size:12px; padding:6px 10px;">
+                                            <option value="pendiente">Pendiente</option>
+                                            <option value="aprobado">Aprobado</option>
+                                            <option value="en_proceso">En Proceso</option>
+                                            <option value="completado">Completado</option>
+                                            <option value="cancelado">Cancelado</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label
+                                            style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">
+                                            PIEZAS TERMINADAS (<span id="lblMetaPzas">Meta: 0</span>)
+                                        </label>
+                                        <input type="number" id="modalPiezasTerminadas" class="form-control form-control-sm" min="0"
+                                               placeholder="0" style="width:100%; font-size:12px; padding:6px 10px;" />
+                                    </div>
+                                </div>
+
+                                <!-- Tabla Dinámica de Paros -->
+                                <div style="margin-bottom:16px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                        <label style="font-size:11px; font-weight:700; color:var(--text-muted); margin:0;">INCIDENCIAS /
+                                            PAROS REGISTRADOS</label>
+                                            <button type="button" class="btn btn-secondary btn-sm" onclick="agregarFilaParoProyecto()">+ Agregar
+                                                Paro</button>
+                                            </div>
+
+                                            <div class="table-wrap">
+                                                <table style="font-size:12px;">
+                                                    <thead>
+                                                        <tr style="background:var(--surface2);">
+                                                            <th>Motivo / Razón</th>
+                                                            <th style="width:115px;">Duración (min)</th>
+                                                            <th style="width:130px;">Tipo</th>
+                                                            <th style="width:40px;"></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="listaParosProyectoBody">
+                                                        <!-- Filas dinámicas -->
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            <div id="alertaExcesoModal"
+                                                 style="display:none; color:var(--danger); font-size:11.5px; font-weight:700; margin-top:8px;">
+                                                ⚠ Los paros no pueden superar el tiempo total programado del turno.
+                                            </div>
+                                        </div>
+
+                                        <!-- Botones de Acción -->
+                                        <div
+                                            style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--border); padding-top:14px;">
+                                            <button type="button" class="btn btn-secondary" onclick="cerrarModalParos()">Cerrar</button>
+                                            <button type="submit" id="btnGuardarParosProg" class="btn btn-primary">Guardar Cambios</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                            @section Scripts {
+                                <script>
+                                    let indexParoProg = 0;
+                                    let horasProgActuales = 0;
+
+                                    function cerrarModalParos() {
+                                        document.getElementById('modalParosOverlay').style.display = 'none';
+                                    }
+
+                                    function abrirModalParos(id, proyecto, linea, celda, horas, parte, estatus, piezasTerm, piezasProg) {
+                                        document.getElementById('modalProgId').value = id;
+                                        document.getElementById('modalProgTitulo').innerText = `${proyecto} — ${parte}`;
+                                        document.getElementById('modalProgSubtitulo').innerText = `${linea} / ${celda} — ${horas} hrs planeadas`;
+                                        document.getElementById('lblMetaPzas').innerText = `Meta: ${piezasProg} pzas`;
+
+                                        // Cargar estatus y piezas terminadas actuales
+                                        let selectEstatus = document.getElementById('modalEstatus');
+                                        if (selectEstatus) {
+                                            let val = (estatus || 'pendiente').toLowerCase();
+                                            selectEstatus.value = (val === 'completado') ? 'terminado' : ((val === 'activo') ? 'en_proceso' : val);
+                                        }
+                                        document.getElementById('modalPiezasTerminadas').value = piezasTerm || 0;
+
+                                        horasProgActuales = parseFloat(horas) || 0;
+                                        document.getElementById('lblModalHorasProg').innerText = `${horasProgActuales.toFixed(2)} h`;
+
+                                        const tbody = document.getElementById('listaParosProyectoBody');
+                                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:10px; color:var(--text-muted);">Cargando incidencias...</td></tr>';
+                                        document.getElementById('modalParosOverlay').style.display = 'flex';
+
+                                        // Cargar los paros asociados a este registro
+                                        fetch(`/Calendario/ObtenerParosProgramacion?programacionId=${id}`)
+                                            .then(r => r.json())
+                                            .then(data => {
+                                                tbody.innerHTML = '';
+                                                indexParoProg = 0;
+                                                if (data && data.length > 0) {
+                                                    data.forEach(p => agregarFilaParoProyecto(p.tipoParo, p.duracionMinutos, p.esProgramado, p.id));
+                                                } else {
+                                                    tbody.innerHTML = '<tr id="filaSinParos"><td colspan="4" style="text-align:center; padding:12px; color:var(--text-muted); font-size:11.5px;">Sin paros registrados. Haz clic en <strong>+ Agregar Paro</strong> para capturar una incidencia.</td></tr>';
+                                                }
+                                                recalcularTiemposModal();
+                                            })
+                                            .catch(() => {
+                                                tbody.innerHTML = '<tr id="filaSinParos"><td colspan="4" style="text-align:center; padding:12px; color:var(--text-muted); font-size:11.5px;">Sin paros registrados.</td></tr>';
+                                                recalcularTiemposModal();
+                                            });
+                                    }
+
+                                    function agregarFilaParoProyecto(motivo = '', minutos = 15, esProgramado = false, paroId = 0) {
+                                        const tbody = document.getElementById('listaParosProyectoBody');
+                                        const filaVacia = document.getElementById('filaSinParos');
+                                        if (filaVacia) filaVacia.remove();
+
+                                        const tr = document.createElement('tr');
+                                        tr.className = 'fila-paro-prog';
+                                        tr.innerHTML = `
+                                                                                <td>
+                                                                                    <input type="hidden" class="p-id" value="${paroId}" />
+                                                                                    <input type="text" class="form-control form-control-sm p-motivo" placeholder="Ej. Falla de soldadora / Falta de material" value="${motivo}" required style="padding:4px 8px; font-size:12px; width:100%;" />
+                                                                                </td>
+                                                                                <td>
+                                                                                    <input type="number" class="form-control form-control-sm p-minutos" min="1" value="${minutos}" 
+                                                                                           oninput="recalcularTiemposModal()" onchange="recalcularTiemposModal()" required style="padding:4px 8px; font-size:12px; width:100%;" />
+                                                                                </td>
+                                                                                <td>
+                                                                                    <select class="form-select form-select-sm p-tipo" style="padding:4px 8px; font-size:12px; width:100%;">
+                                                                                        <option value="false" ${!esProgramado ? 'selected' : ''}>No Prog. (Falla)</option>
+                                                                                        <option value="true" ${esProgramado ? 'selected' : ''}>Programado</option>
+                                                                                    </select>
+                                                                                </td>
+                                                                                <td style="text-align:center;">
+                                                                                    <button type="button" class="btn btn-danger btn-sm" style="padding:2px 6px; font-size:11px;" onclick="eliminarFilaParoProyecto(this)">✕</button>
+                                                                                </td>
+                                                                            `;
+                                        tbody.appendChild(tr);
+                                        indexParoProg++;
+                                        recalcularTiemposModal();
+                                    }
+
+                                    function eliminarFilaParoProyecto(btn) {
+                                        btn.closest('tr').remove();
+                                        recalcularTiemposModal();
+                                    }
+
+                                    function recalcularTiemposModal() {
+                                        let horasBase = parseFloat(horasProgActuales) || 0;
+                                        let minutosTotalesProg = Math.round(horasBase * 60);
+                                        let totalParoMinutos = 0;
+
+                                        document.querySelectorAll('.p-minutos').forEach(input => {
+                                            let val = parseInt(input.value, 10);
+                                            if (!isNaN(val) && val > 0) {
+                                                totalParoMinutos += val;
+                                            }
+                                        });
+
+                                        let tiempoNetoMinutos = minutosTotalesProg - totalParoMinutos;
+                                        let alerta = document.getElementById('alertaExcesoModal');
+                                        let btnGuardar = document.getElementById('btnGuardarParosProg');
+                                        let lblTiempo = document.getElementById('lblModalTiempoNeto');
+                                        let lblParos = document.getElementById('lblModalTotalParos');
+
+                                        if (lblParos) {
+                                            lblParos.innerText = `${totalParoMinutos} min (${(totalParoMinutos / 60).toFixed(2)} h)`;
+                                        }
+
+                                        if (tiempoNetoMinutos < 0) {
+                                            if (alerta) alerta.style.display = 'block';
+                                            if (btnGuardar) btnGuardar.disabled = true;
+                                            if (lblTiempo) {
+                                                lblTiempo.style.color = 'var(--danger)';
+                                                lblTiempo.innerText = '0.00 h (Excedido)';
+                                            }
+                                        } else {
+                                            if (alerta) alerta.style.display = 'none';
+                                            if (btnGuardar) btnGuardar.disabled = false;
+
+                                            let horasDecimal = tiempoNetoMinutos / 60;
+                                            let hEnteras = Math.floor(tiempoNetoMinutos / 60);
+                                            let mRestantes = tiempoNetoMinutos % 60;
+
+                                            if (lblTiempo) {
+                                                lblTiempo.style.color = 'var(--success)';
+                                                lblTiempo.innerText = `${horasDecimal.toFixed(2)} h (${hEnteras}h ${mRestantes}m)`;
+                                            }
+                                        }
+                                    }
+
+                                    // Función para mostrar mensajes flotantes (éxito o error)
+                                    function mostrarToast(mensaje, esExito = true) {
+                                        const toast = document.getElementById('toastNotificacion');
+                                        const icono = document.getElementById('toastIcono');
+                                        const texto = document.getElementById('toastMensaje');
+
+                                        if (!toast) return;
+
+                                        if (esExito) {
+                                            toast.style.background = '#16a34a'; // Verde éxito
+                                            toast.style.color = '#ffffff';
+                                            toast.style.border = '1px solid #15803d';
+                                            icono.innerText = '✓';
+                                        } else {
+                                            toast.style.background = '#dc2626'; // Rojo error
+                                            toast.style.color = '#ffffff';
+                                            toast.style.border = '1px solid #b91c1c';
+                                            icono.innerText = '✕';
+                                        }
+
+                                        texto.innerText = mensaje;
+                                        toast.style.display = 'flex';
+                                        toast.style.opacity = '1';
+
+                                        // Ocultar después de 3.5 segundos
+                                        setTimeout(() => {
+                                            toast.style.opacity = '0';
+                                            setTimeout(() => { toast.style.display = 'none'; }, 300);
+                                        }, 3500);
+                                    }
+
+                                    // Guardado asíncrono con control de confirmación y error
+                                    function guardarAuditoriaProyecto(e) {
+                                        e.preventDefault();
+
+                                        const btnGuardar = document.getElementById('btnGuardarParosProg');
+                                        const textoOriginal = btnGuardar.innerText;
+                                        btnGuardar.disabled = true;
+                                        btnGuardar.innerText = 'Guardando...';
+
+                                        const programacionId = parseInt(document.getElementById('modalProgId').value);
+                                        const estatus = document.getElementById('modalEstatus').value;
+                                        const piezasTerminadas = parseInt(document.getElementById('modalPiezasTerminadas').value) || 0;
+
+                                        let paros = [];
+                                        document.querySelectorAll('.fila-paro-prog').forEach(row => {
+                                            paros.push({
+                                                id: parseInt(row.querySelector('.p-id').value) || 0,
+                                                programacionId: programacionId,
+                                                tipoParo: row.querySelector('.p-motivo').value,
+                                                duracionMinutos: parseInt(row.querySelector('.p-minutos').value) || 0,
+                                                esProgramado: row.querySelector('.p-tipo').value === 'true'
+                                            });
+                                        });
+
+                                        // 1. Guardar paros
+                                        fetch('/Calendario/GuardarParosProgramacion', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ programacionId: programacionId, paros: paros })
+                                        })
+                                            .then(r => r.json())
+                                            .then(resParos => {
+                                                if (!resParos.success) {
+                                                    throw new Error(resParos.message || 'No se pudieron registrar las incidencias.');
+                                                }
+
+                                                // 2. Guardar estatus y conteo de piezas
+                                                return fetch('/Rendimiento/ActualizarCierre', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({
+                                                        programacionId: programacionId,
+                                                        estatus: estatus,
+                                                        piezasTerminadas: piezasTerminadas
+                                                    })
+                                                });
+                                            })
+                                            .then(r => r.json())
+                                            .then(resCierre => {
+                                                if (!resCierre.success) {
+                                                    throw new Error(resCierre.message || 'No se pudo actualizar el cierre de producción.');
+                                                }
+
+                                                // Éxito: cerrar modal, notificar y recargar
+                                                cerrarModalParos();
+                                                mostrarToast('Información de producción y paros guardada correctamente.', true);
+
+                                                setTimeout(() => {
+                                                    location.reload();
+                                                }, 1200);
+                                            })
+                                            .catch(err => {
+                                                // Manejo de error
+                                                btnGuardar.disabled = false;
+                                                btnGuardar.innerText = textoOriginal;
+                                                mostrarToast(err.message || 'Ocurrió un error al intentar guardar los cambios.', false);
+                                            });
+                                    }
+                                </script>
+                            }

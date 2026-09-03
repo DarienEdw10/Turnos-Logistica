@@ -27,12 +27,26 @@ public class UsuariosController : Controller
 
     private async Task<(int Nivel, string Rol, string CWID)> ObtenerUsuarioActualAsync()
     {
-        string cwid = User?.Identity?.Name ?? Environment.UserName ?? "darienedwin.jimenez";
-        if (cwid.Contains('\\')) cwid = cwid.Split('\\')[1].Trim();
+        // 1. Priorizar la cookie del simulador si existe
+        string cwid = "";
+        if (Request.Cookies.TryGetValue("Simulador_CWID", out string? cwidCookie) && !string.IsNullOrWhiteSpace(cwidCookie))
+        {
+            cwid = cwidCookie.Trim();
+        }
+        else
+        {
+            cwid = User?.Identity?.Name ?? Environment.UserName ?? "32352";
+            if (cwid.Contains('\\')) cwid = cwid.Split('\\')[1].Trim();
+        }
 
-        var u = await _context.Usuarios.FirstOrDefaultAsync(x => x.CWID == cwid || x.NoEmpleado == cwid);
-        int nivel = u?.Nivel ?? 40; // Por defecto 40 si es el usuario simulado de pruebas
-        string rol = u?.Rol ?? (nivel >= 40 ? "sistemas" : (nivel >= 30 ? "admin" : "operador"));
+        // 2. Buscar por Nómina / NoEmpleado o CWID oficial
+        var u = await _context.Usuarios
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.NoEmpleado == cwid || x.CWID == cwid || x.Email.StartsWith(cwid));
+
+        // 3. Obtener el nivel real registrado en la BD (fallback a 10 si no existe)
+        int nivel = u?.Nivel ?? 10;
+        string rol = u?.Rol ?? (nivel >= 40 ? "sistemas" : (nivel >= 30 ? "admin" : (nivel >= 20 ? "jefe_log" : "operador")));
 
         return (nivel, rol, cwid);
     }
@@ -161,10 +175,10 @@ public class UsuariosController : Controller
         // =========================================================================
         if (nivelEjecutor < 40 && dto.Nivel >= nivelEjecutor)
         {
-            return BadRequest(new 
-            { 
-                success = false, 
-                message = "Permiso denegado: Un Administrador solo puede asignar roles de menor jerarquía (Operador o Jefe de Logística). Solo Sistemas puede asignar Administradores." 
+            return BadRequest(new
+            {
+                success = false,
+                message = "Permiso denegado: Un Administrador solo puede asignar roles de menor jerarquía (Operador o Jefe de Logística). Solo Sistemas puede asignar Administradores."
             });
         }
 
@@ -241,10 +255,10 @@ public class UsuariosController : Controller
         return 1;
     }
     public class AsignarNivelDto
-{
-    public string Cwid { get; set; } = string.Empty;
-    public string NoEmpleado { get; set; } = string.Empty;
-    public string Nombre { get; set; } = string.Empty;
-    public int Nivel { get; set; }
-}
+    {
+        public string Cwid { get; set; } = string.Empty;
+        public string NoEmpleado { get; set; } = string.Empty;
+        public string Nombre { get; set; } = string.Empty;
+        public int Nivel { get; set; }
+    }
 }

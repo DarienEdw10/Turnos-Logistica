@@ -329,6 +329,12 @@ public class ProgramacionProduccion
 
     [Column("creado_at")]
     public DateTime CreadoAt { get; set; } = DateTime.UtcNow;
+    [Column("horas_programadas", TypeName = "decimal(5,2)")]
+    public decimal HorasProgramadas { get; set; } = 8.0m;
+
+    // NUEVA COLUMNA: Aquí se guarda lo que se captura a mano
+    [Column("piezas_terminadas")]
+    public int PiezasTerminadas { get; set; } = 0;
 }
 
 [Table("Historial_agenda", Schema = "MPS")]
@@ -392,4 +398,37 @@ public class InventarioDiario
 
     [Column("creado_at")]
     public DateTime CreadoAt { get; set; } = DateTime.UtcNow;
+}
+public class TurnoParo
+{
+    public int Id { get; set; }
+    public int? TurnoId { get; set; }
+    public long? ProgramacionId { get; set; }
+    public string TipoParo { get; set; } = string.Empty;
+    public int DuracionMinutos { get; set; }
+    public bool EsProgramado { get; set; } = true;
+    public string? Descripcion { get; set; }
+    public bool Activo { get; set; } = true;
+}
+
+public class TurnoDetalleDto
+{
+    public int Id { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public TimeSpan HoraInicio { get; set; }
+    public TimeSpan HoraFin { get; set; }
+    public double DuracionBrutaHoras => HoraFin <= HoraInicio 
+        ? (HoraFin.Add(TimeSpan.FromDays(1)) - HoraInicio).TotalHours 
+        : (HoraFin - HoraInicio).TotalHours;
+
+    public List<TurnoParo> Paros { get; set; } = new();
+
+    public int TotalMinutosParo => Paros.Where(p => p.Activo).Sum(p => p.DuracionMinutos);
+    public double TotalHorasParo => Math.Round(TotalMinutosParo / 60.0, 2);
+
+    // Tiempo real disponible de máquina / celda
+    public double TiempoNetoEfectivoHoras => Math.Max(0, Math.Round(DuracionBrutaHoras - TotalHorasParo, 2));
+
+    // Validación de viabilidad
+    public bool EsValido => (DuracionBrutaHoras * 60) >= TotalMinutosParo;
 }

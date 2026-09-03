@@ -1,0 +1,15 @@
+@model List<TurnosLogistica.Domain.Models.Planta>
+@{
+    int plantaActivaId = ViewBag.PlantaActivaId ?? 1;
+}
+
+<div class="d-flex align-items-center">
+    <select id="selPlantaGlobal" class="form-select form-select-sm" onchange="cambiarPlantaGlobal(this)">
+        @foreach (var planta in Model)
+        {
+            <!option value="@planta.Id" @(planta.Id == plantaActivaId ? "selected" : "")>
+                @planta.Nombre — @planta.Codigo
+            </!option>
+        }
+    </select>
+</div>

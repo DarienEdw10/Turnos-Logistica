@@ -1,28 +1,42 @@
 ﻿@inject TurnosLogistica.Domain.Data.AppDbContext DbContext
 @{
-    // 1. Obtener planta activa desde Cookies (por defecto 1)
+    // 1. Obtener planta activa desde QueryString, ViewBag o Cookies (por defecto 1)
     int plantaActivaId = 1;
-    if (Context.Request.Cookies.TryGetValue("PlantaActivaId", out string? cookieVal) && int.TryParse(cookieVal, out int
-idParsed))
+
+    if (Context.Request.Query.TryGetValue("plantaId", out var qVal) && int.TryParse(qVal, out int qParsed))
+    {
+        plantaActivaId = qParsed;
+    }
+    else if (ViewBag.PlantaActivaId is int vbId)
+    {
+        plantaActivaId = vbId;
+    }
+    else if (Context.Request.Cookies.TryGetValue("PlantaActivaId", out string? cookieVal) && int.TryParse(cookieVal, out int idParsed))
     {
         plantaActivaId = idParsed;
     }
 
     // =============================================================
-    // USUARIO SIMULADO / DEMO PARA MOSTRAR TODO EL SISTEMA
+    // USUARIO SIMULADO / CWID ACTIVO DESDE COOKIE O BD
     // =============================================================
-    string cwidSimulado = "darienedwin.jimenez";
+    string cwidActivo = "32352"; // Por defecto: Darien Jimenez
+    if (Context.Request.Cookies.TryGetValue("Simulador_CWID", out string? cookieCwid) && !string.IsNullOrWhiteSpace(cookieCwid))
+    {
+        cwidActivo = cookieCwid.Trim();
+    }
 
-    // Consultar usuario en BD
+    // Consultar usuario en BD por Nómina o CWID oficial
     var usuarioDb = DbContext.Usuarios.FirstOrDefault(u =>
-        u.CWID == cwidSimulado ||
-        u.NoEmpleado == "32352" ||
-        u.CWID == "darijim1");
+        u.NoEmpleado == cwidActivo ||
+        u.CWID == cwidActivo ||
+        u.Email.StartsWith(cwidActivo));
 
     string nombreMostrar = usuarioDb?.Nombre ?? "Darien Edwin Jimenez Gonzaga";
-    string rolBadge = "SISTEMAS"; // o "ADMINISTRADOR"
+    string cwidMostrar = usuarioDb?.NoEmpleado ?? usuarioDb?.CWID ?? cwidActivo;
+    string rolBadge = (usuarioDb?.Rol ?? "sistemas").ToUpper();
+    int nivelJerarquico = usuarioDb?.Nivel ?? 40;
 
-    // Iniciales
+    // Iniciales dinámicas
     string iniciales = "DJ";
     if (!string.IsNullOrWhiteSpace(nombreMostrar))
     {
@@ -32,7 +46,7 @@ idParsed))
             : nombreMostrar.Substring(0, Math.Min(2, nombreMostrar.Length)).ToUpper();
     }
 
-    // Consultar plantas activas
+    // Consultar plantas activas directamente de la BD
     var plantasDisponibles = DbContext.Plantas.Where(p => p.Activa).OrderBy(p => p.Id).ToList();
 }
 <!DOCTYPE html>
@@ -57,33 +71,130 @@ idParsed))
         <div class="logo">
             <div class="logo-icon">
                 <svg width="18" height="18" viewBox="0 0 24 24">
-                    <path
-                    d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+                    <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
                 </svg>
             </div>
             <div class="app-title">Sistema de Programación de Producción</div>
         </div>
 
-        <!-- SELECTOR DE PLANTA DINÁMICO EN CABECERA -->
-        <div class="planta-selector">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--accent)">
-                <path
-                d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-            </svg>
-            <select id="headerPlanta" onchange="cambiarPlantaGlobal(this.value)">
-                @foreach (var p in plantasDisponibles)
-                {
-                    <option value="@p.Id" selected="@(p.Id == plantaActivaId)">@p.Nombre — @p.Codigo</option>
-                }
-            </select>
-        </div>
+        <style>
+            .plant-selector-wrapper {
+                position: relative;
+                display: inline-flex;
+                align-items: center;
+                background: #ffffff;
+                border: 1px solid #e2e8f0;
+                border-radius: 10px;
+                padding: 4px 10px;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            }
 
-        <!-- CHIP DE USUARIO LIMPIO (Sin prefijo MAGNA ni texto de nivel) -->
-        <div class="user-chip" style="display:flex; align-items:center; gap:8px;">
-            <div class="avatar" style="background:#2563eb; color:#fff; font-weight:700;">@iniciales</div>
-            <div style="display:flex; flex-direction:column; align-items:flex-start;">
-                <span style="font-size:12px; font-weight:700; line-height:1.1; color:var(--text);">@cwidSimulado</span>
-                <span style="font-size:10px; color:#2563eb; font-weight:800; text-transform:uppercase;">@rolBadge</span>
+            .plant-selector-wrapper:hover {
+                border-color: #cbd5e1;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+                background: #f8fafc;
+            }
+
+            .plant-selector-wrapper:focus-within {
+                border-color: #2563eb;
+                box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+                background: #ffffff;
+            }
+
+            .plant-selector-icon {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 26px;
+                height: 26px;
+                border-radius: 7px;
+                background: #eff6ff;
+                color: #2563eb;
+                margin-right: 8px;
+                flex-shrink: 0;
+            }
+
+            .plant-select-custom {
+                border: none;
+                outline: none;
+                background: transparent;
+                font-size: 12.5px;
+                font-weight: 600;
+                color: #1e293b;
+                cursor: pointer;
+                padding-right: 20px;
+                appearance: none;
+                -webkit-appearance: none;
+                -moz-appearance: none;
+            }
+
+            .plant-selector-caret {
+                position: absolute;
+                right: 10px;
+                pointer-events: none;
+                color: #64748b;
+                display: flex;
+                align-items: center;
+            }
+
+            .simulador-wrapper {
+                position: relative;
+                display: inline-flex;
+                align-items: center;
+                background: #f8fafc;
+                border: 1px dashed #94a3b8;
+                border-radius: 10px;
+                padding: 3px 10px;
+                margin-right: 10px;
+                gap: 6px;
+            }
+        </style>
+
+        <div style="display:flex; align-items:center; gap:12px; margin-left:auto;">
+            <!-- SELECTOR DE PLANTA GLOBAL -->
+            <div class="plant-selector-wrapper">
+                <div class="plant-selector-icon">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                    </svg>
+                </div>
+                <select id="selPlantaGlobal" class="plant-select-custom" onchange="cambiarPlantaGlobal(this)">
+                    @foreach (var planta in plantasDisponibles)
+                    {
+                        <!option value="@planta.Id" @(planta.Id == plantaActivaId ? "selected" : "")>
+                            @planta.Nombre — @planta.Codigo
+                        </!option>
+                    }
+                </select>
+                <div class="plant-selector-caret">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M7 10l5 5 5-5z" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- SIMULADOR INTERACTIVO DE USUARIOS POR CWID / CONTROL -->
+            <div class="simulador-wrapper">
+                <span style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">
+                    🪪 CWID:
+                </span>
+                <select id="selSimuladorCwid" class="plant-select-custom" style="font-size: 11.5px; font-weight: 700; color: #1e293b;" onchange="cambiarCwidSimulador(this.value)">
+                    <!option value="32352" @(cwidActivo == "32352" ? "selected" : "")>32352 — Darien Jimenez (sistemas)</!option>
+                    <!option value="31102" @(cwidActivo == "31102" ? "selected" : "")>31102 — Allan Castro (sistemas)</!option>
+                    <!option value="6926" @(cwidActivo == "6926" ? "selected" : "")>6926 — David Galvan (admin)</!option>
+                    <!option value="1568" @(cwidActivo == "1568" ? "selected" : "")>1568 — Jose Sanchez (jefe_log)</!option>
+                    <!option value="1402" @(cwidActivo == "1402" ? "selected" : "")>1402 — Sergio Diaz (operador)</!option>
+                </select>
+            </div>
+
+            <!-- CHIP DE USUARIO SINCRONIZADO -->
+            <div class="user-chip" style="display:flex; align-items:center; gap:8px;">
+                <div class="avatar" style="background:#2563eb; color:#fff; font-weight:700;">@iniciales</div>
+                <div style="display:flex; flex-direction:column; align-items:flex-start;">
+                    <span style="font-size:12px; font-weight:700; line-height:1.1; color:var(--text);">@cwidMostrar</span>
+                    <span style="font-size:10px; color:#2563eb; font-weight:800; text-transform:uppercase;">@rolBadge (@nivelJerarquico)</span>
+                </div>
             </div>
         </div>
     </div>
@@ -95,80 +206,98 @@ idParsed))
     <div id="layout">
         <nav id="sidebar">
 
-            <!-- 1. CONFIGURACIÓN -->
-            <div class="nav-section-label">Configuración</div>
-            <a class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Plantas" ? "active" : "")"
-               asp-controller="Plantas" asp-action="Index">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                    d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                </svg>
-                Selector de Planta
-            </a>
+            <!-- 1. CONFIGURACIÓN (Solo admin y sistemas: Nivel >= 30) -->
+            @if (nivelJerarquico >= 30)
+            {
+                <div class="nav-section-label">Configuración</div>
+                <a class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Plantas" ? "active" : "")"
+                   asp-controller="Plantas" asp-action="Index">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                    </svg>
+                    Selector de Planta
+                </a>
+            }
 
-            <!-- CALENDARIO SIEMPRE HABILITADO PARA CUALQUIER USUARIO EN LA INTRANET -->
+            <!-- 2. PROGRAMACIÓN -->
             <div class="nav-section-label" style="margin-top:8px">Programación</div>
             <a class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Calendario" ? "active" : "")"
                asp-controller="Calendario" asp-action="Index">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                    d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2h-1V1h-2zm3 18H5V8h14v11z" />
+                    <path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2h-1V1h-2zm3 18H5V8h14v11z" />
                 </svg>
                 Calendario de Producción
             </a>
-            <a class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Programacion" ? "active" : "")"
-               asp-controller="Programacion" asp-action="Index">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                    d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z" />
+
+            @if (nivelJerarquico >= 20)
+            {
+                <a class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Programacion" ? "active" : "")"
+                   asp-controller="Programacion" asp-action="Index">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z" />
+                    </svg>
+                    Formulario de Programación
+                </a>
+            }
+
+            <!-- 3. CATÁLOGOS (Nivel >= 20: jefe_log, admin, sistemas) -->
+            @if (nivelJerarquico >= 20)
+            {
+                <div class="nav-section-label" style="margin-top:8px">Catálogos</div>
+                <a class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Partes" ? "active" : "")"
+                   asp-controller="Partes" asp-action="Index">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.53 15.48 0 12.36 0c-1.74 0-3.31.85-4.36 2.1C6.91.85 5.34 0 3.6 0 .48 0-2.04 2.53-2.04 4.64c0 .48.11.92.18 1.36H-4v2h24V6zm-7.64 0c0-1.49 1.21-2.7 2.64-2.7 1.49 0 2.64 1.21 2.64 2.7H12.36zM3.6 3.3c1.43 0 2.64 1.21 2.64 2.7H.96C.96 4.51 2.11 3.3 3.6 3.3zM4 8v12h4v-5h8v5h4V8H4z" />
+                    </svg>
+                    Maestro de Partes
+                </a>
+                <a class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Turnos" ? "active" : "")"
+                   asp-controller="Turnos" asp-action="Index">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm.5 5v5.25l4.5 2.67-.75 1.23L11 13V7h1.5z" />
+                    </svg>
+                    Gestión de Turnos
+                </a>
+                <a class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Estructura" ? "active" : "")"
+                   asp-controller="Estructura" asp-action="Index">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M17 12c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm1.65 7.35L16.5 17.2V14h1v2.79l1.85 1.85-.7.71zM12 3H5C3.9 3 3 3.9 3 5v14c0 1.1.9 2 2 2h5.26c-.42-.96-.68-2-.74-3H5l4-4 2.26 2.26 2.28-2.27.72.72V12c0-.53.09-1.04.21-1.54L11 12.24l-4-4 4-4h1v2h2V5c0-1.1-.9-2-2-2z" />
+                    </svg>
+                    Gestión de Estructura
+                </a>
+            }
+
+            <!-- OPERACIÓN PISO (Disponible siempre, ideal para operador) -->
+            <a class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Rendimiento" ? "active" : "")"
+               asp-controller="Rendimiento" asp-action="Index">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                 </svg>
-                Formulario de Programación
+                <span>Rendimiento Turno</span>
             </a>
 
-            <!-- 3. CATÁLOGOS -->
-            <div class="nav-section-label" style="margin-top:8px">Catálogos</div>
-            <a class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Partes" ? "active" : "")"
-               asp-controller="Partes" asp-action="Index">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                    d="M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.53 15.48 0 12.36 0c-1.74 0-3.31.85-4.36 2.1C6.91.85 5.34 0 3.6 0 .48 0-2.04 2.53-2.04 4.64c0 .48.11.92.18 1.36H-4v2h24V6zm-7.64 0c0-1.49 1.21-2.7 2.64-2.7 1.49 0 2.64 1.21 2.64 2.7H12.36zM3.6 3.3c1.43 0 2.64 1.21 2.64 2.7H.96C.96 4.51 2.11 3.3 3.6 3.3zM4 8v12h4v-5h8v5h4V8H4z" />
-                </svg>
-                Maestro de Partes
-            </a>
-            <a class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Turnos" ? "active" : "")"
-               asp-controller="Turnos" asp-action="Index">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm.5 5v5.25l4.5 2.67-.75 1.23L11 13V7h1.5z" />
-                </svg>
-                Gestión de Turnos
-            </a>
-            <a class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Estructura" ? "active" : "")"
-               asp-controller="Estructura" asp-action="Index">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                    d="M17 12c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm1.65 7.35L16.5 17.2V14h1v2.79l1.85 1.85-.7.71zM12 3H5C3.9 3 3 3.9 3 5v14c0 1.1.9 2 2 2h5.26c-.42-.96-.68-2-.74-3H5l4-4 2.26 2.26 2.28-2.27.72.72V12c0-.53.09-1.04.21-1.54L11 12.24l-4-4 4-4h1v2h2V5c0-1.1-.9-2-2-2z" />
-                </svg>
-                Gestión de Estructura
-            </a>
-
-            <!-- 4. ADMINISTRACIÓN -->
-            <div class="nav-section-label" style="margin-top:8px">Administración</div>
-            <a class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Usuarios" ? "active" : "")"
-               asp-controller="Usuarios" asp-action="Index">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                    d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
-                </svg>
-                Usuarios y Roles
-            </a>
-            <a class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Auditoria" ? "active" : "")"
-               asp-controller="Auditoria" asp-action="Index">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                    d="M13 9h-2V7h2m0 10h-2v-6h2m-1-9A10 10 0 002 12a10 10 0 0010 10 10 10 0 0010-10A10 10 0 0012 2z" />
-                </svg>
-                Historial / Auditoría
-            </a>
+            <!-- 4. ADMINISTRACIÓN (Solo admin y sistemas: Nivel >= 30) -->
+            @if (nivelJerarquico >= 30)
+            {
+                <div class="nav-section-label" style="margin-top:8px">Administración</div>
+                @if (nivelJerarquico == 40)
+                {
+                    <a class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Usuarios" ? "active" : "")"
+                       asp-controller="Usuarios" asp-action="Index">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+                        </svg>
+                        Usuarios y Roles
+                    </a>
+                }
+                <a class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Auditoria" ? "active" : "")"
+                   asp-controller="Auditoria" asp-action="Index">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M13 9h-2V7h2m0 10h-2v-6h2m-1-9A10 10 0 002 12a10 10 0 0010 10 10 10 0 0010-10A10 10 0 0012 2z" />
+                    </svg>
+                    Historial / Auditoría
+                </a>
+            }
 
         </nav>
 
@@ -181,61 +310,91 @@ idParsed))
     <div id="modal-overlay" onclick="handleModalClick(event)">
         <div id="modal-box">
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-                <div
-                    style="width:36px;height:36px;background:var(--warning-bg);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <div style="width:36px;height:36px;background:var(--warning-bg);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--warning)">
                         <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
                     </svg>
                 </div>
                 <h3>Razón Obligatoria</h3>
             </div>
-            <p>Para continuar con esta acción, debe ingresar una razón. Este registro quedará en el historial de
-                auditoría (solo lectura).</p>
-                <textarea id="razonInput" rows="3"
-                          style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;resize:vertical;margin-bottom:6px"
-                          placeholder="Escriba la razón de la acción..."></textarea>
-                <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px">Campo obligatorio — no se puede dejar
-                    vacío.</div>
-                    <div style="display:flex;justify-content:flex-end;gap:8px">
-                        <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-                        <button class="btn btn-primary" onclick="guardarRazon()">Aceptar</button>
-                    </div>
-                </div>
+            <p>Para continuar con esta acción, debe ingresar una razón. Este registro quedará en el historial de auditoría (solo lectura).</p>
+            <textarea id="razonInput" rows="3"
+                      style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;resize:vertical;margin-bottom:6px"
+                      placeholder="Escriba la razón de la acción..."></textarea>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px">Campo obligatorio — no se puede dejar vacío.</div>
+            <div style="display:flex;justify-content:flex-end;gap:8px">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="guardarRazon()">Aceptar</button>
             </div>
+        </div>
+    </div>
 
-            <script>
-                    function toggleSidebar() {
-                        var sidebar = document.getElementById('sidebar');
-                        var backdrop = document.getElementById('sidebar-backdrop');
-                        if (sidebar && backdrop) {
-                            sidebar.classList.toggle('open');
-                            backdrop.classList.toggle('active');
-                        }
-                    }
+    <script>
+        function toggleSidebar() {
+            var sidebar = document.getElementById('sidebar');
+            var backdrop = document.getElementById('sidebar-backdrop');
+            if (sidebar && backdrop) {
+                sidebar.classList.toggle('open');
+                backdrop.classList.toggle('active');
+            }
+        }
 
-                    function cambiarPlantaGlobal(plantaId) {
-                        document.cookie = "PlantaActivaId=" + plantaId + "; path=/; max-age=" + (30 * 24 * 60 * 60);
-                        window.location.reload();
-                    }
+        function cambiarPlantaGlobal(select) {
+            const nuevaPlantaId = select.value;
+            if (!nuevaPlantaId) return;
 
-                    function openModal() { var m = document.getElementById('modal-overlay'); if (m) m.classList.add('open'); }
-                    function closeModal() { var m = document.getElementById('modal-overlay'); if (m) m.classList.remove('open'); }
-                    function handleModalClick(ev) { if (ev.target && ev.target.id === 'modal-overlay') closeModal(); }
-                    function guardarRazon() {
-                        var input = document.getElementById('razonInput');
-                        if (!input || !input.value.trim()) { alert('La razón es obligatoria. No se puede dejar vacío.'); return; }
-                        alert('Acción registrada en el historial (solo lectura).\nRazón: ' + input.value.trim());
-                        input.value = '';
-                        closeModal();
-                    }
-                    function toggleTree(id) {
-                        var children = document.getElementById('children-' + id);
-                        var toggle = document.getElementById('toggle-' + id);
-                        if (children) children.classList.toggle('collapsed');
-                        if (toggle) toggle.innerHTML = children && children.classList.contains('collapsed') ? '&#9654;' : '&#9660;';
-                    }
-            </script>
-            @await RenderSectionAsync("Scripts", required: false)
-        </body>
+            document.cookie = `PlantaActivaId=${nuevaPlantaId}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`;
 
-    </html>
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('plantaId', nuevaPlantaId);
+            window.location.href = currentUrl.toString();
+        }
+
+        function cambiarCwidSimulador(nuevoCwid) {
+            if (!nuevoCwid) return;
+
+            // 1. Guardar cookie para la vista
+            document.cookie = `Simulador_CWID=${nuevoCwid}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`;
+
+            // 2. Ejecutar POST para actualizar los Claims de sesión en ASP.NET Core
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/Simulador/CambiarUsuarioPorNomina';
+
+            const inputNomina = document.createElement('input');
+            inputNomina.type = 'hidden';
+            inputNomina.name = 'nomina';
+            inputNomina.value = nuevoCwid;
+            form.appendChild(inputNomina);
+
+            const inputReturn = document.createElement('input');
+            inputReturn.type = 'hidden';
+            inputReturn.name = 'returnUrl';
+            inputReturn.value = window.location.pathname + window.location.search;
+            form.appendChild(inputReturn);
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        function openModal() { var m = document.getElementById('modal-overlay'); if (m) m.classList.add('open'); }
+        function closeModal() { var m = document.getElementById('modal-overlay'); if (m) m.classList.remove('open'); }
+        function handleModalClick(ev) { if (ev.target && ev.target.id === 'modal-overlay') closeModal(); }
+        function guardarRazon() {
+            var input = document.getElementById('razonInput');
+            if (!input || !input.value.trim()) { alert('La razón es obligatoria. No se puede dejar vacío.'); return; }
+            alert('Acción registrada en el historial (solo lectura).\nRazón: ' + input.value.trim());
+            input.value = '';
+            closeModal();
+        }
+        function toggleTree(id) {
+            var children = document.getElementById('children-' + id);
+            var toggle = document.getElementById('toggle-' + id);
+            if (children) children.classList.toggle('collapsed');
+            if (toggle) toggle.innerHTML = children && children.classList.contains('collapsed') ? '&#9654;' : '&#9660;';
+        }
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+
+</html>

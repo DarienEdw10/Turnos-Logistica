@@ -15,17 +15,21 @@
     int diasMesAnterior = DateTime.DaysInMonth(mesAnterior.Year, mesAnterior.Month);
     int totalCeldasPrevias = diaInicioSemana - 1;
 
-    var fechaPrev = granularidad == "mensual" ? fechaBase.AddMonths(-1) : (granularidad == "semanal" ? fechaBase.AddDays(-7) : fechaBase.AddDays(-1));
-    var fechaNext = granularidad == "mensual" ? fechaBase.AddMonths(1) : (granularidad == "semanal" ? fechaBase.AddDays(7) : fechaBase.AddDays(1));
+    var fechaPrev = granularidad == "mensual" ? fechaBase.AddMonths(-1) : (granularidad == "semanal" ? fechaBase.AddDays(-7)
+: fechaBase.AddDays(-1));
+    var fechaNext = granularidad == "mensual" ? fechaBase.AddMonths(1) : (granularidad == "semanal" ? fechaBase.AddDays(7) :
+fechaBase.AddDays(1));
 }
 
 <!-- ENCABEZADO CON NAVEGADOR DINÁMICO -->
 <div class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
     <div>
         <div class="page-title" style="font-size:20px; font-weight:700;">Calendario de Producción</div>
-        <div class="page-subtitle" style="color:var(--text-muted); font-size:13px;">
-            Vista @granularidad.ToUpper() — Planta @(Model?.PlantaId ?? 1) / 
-            @(granularidad == "diario" ? fechaBase.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("es-MX")).ToUpper() : primerDiaMes.ToString("MMMM yyyy", new System.Globalization.CultureInfo("es-MX")).ToUpper())
+        <div class="page-subtitle" style="color:var(--text-muted); font-size:18px;">
+            Vista @granularidad.ToUpper() — Planta @(Model?.PlantaId ?? 1) /
+            @(granularidad == "diario" ? fechaBase.ToString("dd MMMM yyyy", new
+            System.Globalization.CultureInfo("es-MX")).ToUpper() : primerDiaMes.ToString("MMMM yyyy", new
+            System.Globalization.CultureInfo("es-MX")).ToUpper())
         </div>
     </div>
 
@@ -46,9 +50,47 @@
             Mes Siguiente ▶
         </a>
 
-        <a class="btn btn-primary" asp-controller="Programacion" asp-action="Index" style="padding:6px 14px; font-size:13px; font-weight:600; text-decoration:none; margin-left:6px;">
+        <a class="btn btn-primary" asp-controller="Programacion" asp-action="Index"
+           style="padding:6px 14px; font-size:13px; font-weight:600; text-decoration:none; margin-left:6px;">
             + Nueva Programación
         </a>
+    </div>
+</div>
+
+<!-- BARRA DE LEYENDA (ESTADOS + TURNOS) -->
+<div class="calendario-leyenda">
+    <span style="color:var(--text-muted); font-weight:700; margin-right:4px;">ESTADOS:</span>
+    <div class="leyenda-item">
+        <span class="leyenda-dot" style="background:#d97706;"></span>
+        <span>Pendiente</span>
+    </div>
+    <div class="leyenda-item">
+        <span class="leyenda-dot" style="background:#2563eb;"></span>
+        <span>Activo</span>
+    </div>
+    <div class="leyenda-item">
+        <span class="leyenda-dot" style="background:#16a34a;"></span>
+        <span>Terminado</span>
+    </div>
+
+    <span style="color:var(--border); margin:0 8px;">|</span>
+
+    <span style="color:var(--text-muted); font-weight:700; margin-right:4px;">TURNOS (BORDE):</span>
+    <div class="leyenda-item">
+        <span class="leyenda-dot" style="background:var(--t1);"></span>
+        <span>1T Matutino</span>
+    </div>
+    <div class="leyenda-item">
+        <span class="leyenda-dot" style="background:var(--t2);"></span>
+        <span>2T Vespertino</span>
+    </div>
+    <div class="leyenda-item">
+        <span class="leyenda-dot" style="background:var(--t3);"></span>
+        <span>3T Nocturno</span>
+    </div>
+    <div class="leyenda-item">
+        <span class="leyenda-dot" style="background:var(--t12h);"></span>
+        <span>12H</span>
     </div>
 </div>
 
@@ -56,24 +98,33 @@
 <div class="card" style="padding:16px 20px; margin-bottom:16px;">
     <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-end">
         <div>
-            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px">
+            <div
+                style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px">
                 Agrupación
             </div>
             <div class="segmented">
-                <a class="seg-btn @(agrupacion == "proyecto" ? "active" : "")" href="?agrupacion=proyecto&granularidad=@granularidad">Proyecto</a>
-                <a class="seg-btn @(agrupacion == "linea" ? "active" : "")" href="?agrupacion=linea&granularidad=@granularidad">Línea (grupo)</a>
-                <a class="seg-btn @(agrupacion == "celda" ? "active" : "")" href="?agrupacion=celda&granularidad=@granularidad">Celda</a>
-                <a class="seg-btn @(agrupacion == "parte" ? "active" : "")" href="?agrupacion=parte&granularidad=@granularidad">Número de parte</a>
+                <a class="seg-btn @(agrupacion == "proyecto" ? "active" : "")"
+                   href="?agrupacion=proyecto&granularidad=@granularidad">Proyecto</a>
+                <a class="seg-btn @(agrupacion == "linea" ? "active" : "")"
+                   href="?agrupacion=linea&granularidad=@granularidad">Línea (grupo)</a>
+                <a class="seg-btn @(agrupacion == "celda" ? "active" : "")"
+                   href="?agrupacion=celda&granularidad=@granularidad">Celda</a>
+                <a class="seg-btn @(agrupacion == "parte" ? "active" : "")"
+                   href="?agrupacion=parte&granularidad=@granularidad">Número de parte</a>
             </div>
         </div>
         <div>
-            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px">
+            <div
+                style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px">
                 Granularidad
             </div>
             <div class="segmented">
-                <a class="seg-btn @(granularidad == "mensual" ? "active" : "")" href="?agrupacion=@agrupacion&granularidad=mensual">Mensual</a>
-                <a class="seg-btn @(granularidad == "semanal" ? "active" : "")" href="?agrupacion=@agrupacion&granularidad=semanal">Semanal</a>
-                <a class="seg-btn @(granularidad == "diario" ? "active" : "")" href="?agrupacion=@agrupacion&granularidad=diario">Diario</a>
+                <a class="seg-btn @(granularidad == "mensual" ? "active" : "")"
+                   href="?agrupacion=@agrupacion&granularidad=mensual">Mensual</a>
+                <a class="seg-btn @(granularidad == "semanal" ? "active" : "")"
+                   href="?agrupacion=@agrupacion&granularidad=semanal">Semanal</a>
+                <a class="seg-btn @(granularidad == "diario" ? "active" : "")"
+                   href="?agrupacion=@agrupacion&granularidad=diario">Diario</a>
             </div>
         </div>
     </div>
@@ -81,194 +132,525 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;margin-top:1px">
             <path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
         </svg>
-        <span><strong>Regla de densidad:</strong> Por Proyecto → mensual. Por Línea → semanal. Por Número de parte → diario.</span>
-    </div>
-</div>
-
-<!-- FILTROS -->
-<form method="get" asp-controller="Calendario" asp-action="Index" class="filter-bar" style="margin-bottom:16px;">
-    <input type="hidden" name="agrupacion" value="@Model?.Agrupacion" />
-    <input type="hidden" name="granularidad" value="@Model?.Granularidad" />
-
-    <div class="filter-group">
-        <label>Línea</label>
-        <select name="linea">
-            <option value="Todas" selected="@(string.IsNullOrEmpty(Model?.FiltroLinea) || Model?.FiltroLinea == "Todas")">Todas</option>
-            @if (Model?.LineasDisponibles != null)
-            {
-                @foreach (var l in Model.LineasDisponibles)
-                {
-                    <option value="@l" selected="@(Model?.FiltroLinea == l)">@l</option>
-                }
-            }
-        </select>
+        <span><strong>Regla de densidad:</strong> Por Proyecto → mensual. Por Línea → semanal. Por Número de parte →
+            diario.</span>
+        </div>
     </div>
 
-    <div class="filter-group">
-        <label>Celda</label>
-        <select name="celda">
-            <option value="Todas" selected="@(string.IsNullOrEmpty(Model?.FiltroCelda) || Model?.FiltroCelda == "Todas")">Todas</option>
-            @if (Model?.CeldasDisponibles != null)
-            {
-                @foreach (var c in Model.CeldasDisponibles)
+    <!-- FILTROS -->
+    <form method="get" asp-controller="Calendario" asp-action="Index" class="filter-bar" style="margin-bottom:16px;">
+        <input type="hidden" name="agrupacion" value="@Model?.Agrupacion" />
+        <input type="hidden" name="granularidad" value="@Model?.Granularidad" />
+
+        <div class="filter-group">
+            <label>Línea</label>
+            <select name="linea">
+                <option value="Todas"
+                        selected="@(string.IsNullOrEmpty(Model?.FiltroLinea) || Model?.FiltroLinea == "Todas")">Todas</option>
+                @if (Model?.LineasDisponibles != null)
                 {
-                    <option value="@c" selected="@(Model?.FiltroCelda == c)">@c</option>
-                }
-            }
-        </select>
-    </div>
-
-    <div class="filter-group">
-        <label>Turno</label>
-        <select name="turno">
-            <option value="Todos" selected="@(string.IsNullOrEmpty(Model?.FiltroTurno) || Model?.FiltroTurno == "Todos")">Todos</option>
-            @if (Model?.TurnosDisponibles != null)
-            {
-                @foreach (var t in Model.TurnosDisponibles)
-                {
-                    <option value="@t" selected="@(Model?.FiltroTurno == t)">@t</option>
-                }
-            }
-        </select>
-    </div>
-
-    <button type="submit" class="btn btn-primary btn-sm">Aplicar</button>
-    <a asp-action="Index" class="btn btn-secondary btn-sm" style="text-decoration:none;display:inline-flex;align-items:center;">Limpiar</a>
-</form>
-
-<!-- GRID DEL CALENDARIO SEGÚN GRANULARIDAD -->
-<div class="card" style="padding:12px">
-
-    @if (granularidad == "diario")
-    {
-        <!-- VISTA DIARIA -->
-        <div class="cal-grid-diario">
-            <div class="cal-cell today">
-                <div class="cal-day-num" style="font-size:14px;margin-bottom:12px;">
-                    <span>@fechaBase.ToString("dddd, dd MMMM yyyy", new System.Globalization.CultureInfo("es-MX")).ToUpper()</span>
-                    <span class="badge badge-programado">@((Model?.Eventos?.Count ?? 0)) Registros</span>
-                </div>
-
-                @if (Model?.Eventos != null && Model.Eventos.Any())
-                {
-                    @foreach (var ev in Model.Eventos)
+                    @foreach (var l in Model.LineasDisponibles)
                     {
-                        string claseCss = "t1";
-                        string turnoUpper = (ev.TurnoClave ?? "").ToUpperInvariant();
-                        if (turnoUpper.Contains("2") || turnoUpper.Contains("VESP")) claseCss = "t2";
-                        else if (turnoUpper.Contains("3") || turnoUpper.Contains("NOCT")) claseCss = "t3";
-
-                        <div class="cal-event cal-event-@claseCss" style="padding:10px;margin-bottom:8px;font-size:12px;" onclick="openModal()">
-                            <div style="display:flex;justify-content:space-between;align-items:center;">
-                                <span class="cal-event-title" style="font-size:13px;">@ev.ProyectoCodigo</span>
-                                <span class="badge badge-@claseCss">@ev.TurnoClave</span>
-                            </div>
-                            <div class="cal-event-meta" style="margin:4px 0;">
-                                @ev.LineaNombre / @ev.CeldaCodigo / <strong>@ev.SapPartNumber</strong>
-                            </div>
-                            <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
-                                <span class="badge badge-programado">@ev.Horas h</span>
-                                <span class="badge badge-encurso">@ev.Cantidad pzas</span>
-                                <span class="badge badge-terminado">@ev.Estado</span>
-                            </div>
-                        </div>
+                        <option value="@l" selected="@(Model?.FiltroLinea == l)">@l</option>
                     }
+                }
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>Celda</label>
+            <select name="celda">
+                <option value="Todas"
+                        selected="@(string.IsNullOrEmpty(Model?.FiltroCelda) || Model?.FiltroCelda == "Todas")">Todas</option>
+                @if (Model?.CeldasDisponibles != null)
+                {
+                    @foreach (var c in Model.CeldasDisponibles)
+                    {
+                        <option value="@c" selected="@(Model?.FiltroCelda == c)">@c</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>Turno</label>
+            <select name="turno">
+                <option value="Todos"
+                        selected="@(string.IsNullOrEmpty(Model?.FiltroTurno) || Model?.FiltroTurno == "Todos")">Todos</option>
+                @if (Model?.TurnosDisponibles != null)
+                {
+                    @foreach (var t in Model.TurnosDisponibles)
+                    {
+                        <option value="@t" selected="@(Model?.FiltroTurno == t)">@t</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-sm">Aplicar</button>
+        <a asp-action="Index" class="btn btn-secondary btn-sm"
+           style="text-decoration:none;display:inline-flex;align-items:center;">Limpiar</a>
+    </form>
+
+    <!-- GRID DEL CALENDARIO SEGÚN GRANULARIDAD -->
+    <div class="card" style="padding:12px">
+
+        @if (granularidad == "diario")
+        {
+            <!-- VISTA DIARIA -->
+            <div class="cal-grid-diario">
+                <div class="cal-cell today">
+                    <div class="cal-day-num" style="font-size:14px;margin-bottom:12px;">
+                        <span>@fechaBase.ToString("dddd, dd MMMM yyyy", new
+                                                                                                                                                                                            System.Globalization.CultureInfo("es-MX")).ToUpper()</span>
+                            <span class="badge badge-programado">@((Model?.Eventos?.Count ?? 0)) Registros</span>
+                        </div>
+
+                        @if (Model?.Eventos != null && Model.Eventos.Any())
+                        {
+                            @foreach (var ev in Model.Eventos)
+                            {
+                                string turnoUpper = (ev.TurnoClave ?? "").ToUpperInvariant();
+                                string claseTurno = "turno-matutino";
+                                if (turnoUpper.Contains("2") || turnoUpper.Contains("VESP")) claseTurno = "turno-vespertino";
+                                else if (turnoUpper.Contains("3") || turnoUpper.Contains("NOCT")) claseTurno = "turno-nocturno";
+                                else if (turnoUpper.Contains("12H")) claseTurno = "turno-12h";
+
+                                string estatusLower = (ev.Estado ?? "pendiente").ToLowerInvariant();
+                                string claseEstado = estatusLower switch
+                                {
+                                    "terminado" or "completado" => "estado-terminado",
+                                    "activo" or "en proceso" or "en curso" => "estado-activo",
+                                    _ => "estado-pendiente"
+                                };
+                                string badgeEstadoClass = estatusLower switch
+                                {
+                                    "terminado" or "completado" => "badge-estado-terminado",
+                                    "activo" or "en proceso" or "en curso" => "badge-estado-activo",
+                                    _ => "badge-estado-pendiente"
+                                };
+
+                                <div class="card-evento @claseTurno @claseEstado" style="padding:10px; margin-bottom:8px; cursor:pointer;"
+                                     onclick="abrirModalParos(@ev.Id, '@ev.ProyectoCodigo', '@ev.LineaNombre', '@ev.CeldaCodigo', @ev.Horas)">
+                                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                                        <strong style="font-size:13px; color:var(--text);">@ev.ProyectoCodigo</strong>
+                                        <span class="badge-estado @badgeEstadoClass">@(ev.Estado ?? "Pendiente")</span>
+                                    </div>
+                                    <div class="cal-event-meta" style="margin:4px 0; font-size:11.5px; color:var(--text-muted);">
+                                        @ev.LineaNombre / @ev.CeldaCodigo / <strong>@ev.SapPartNumber</strong>
+                                    </div>
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
+                                        <div style="display:flex; gap:6px; align-items:center;">
+                                            <span style="font-size:11px; font-weight:700; color:var(--text);">@ev.TurnoClave</span>
+                                            <span class="horas-pill">@ev.Horas h</span>
+                                        </div>
+                                        <div style="font-size:11.5px; font-weight:700; color:var(--text);">
+                                            📦 @ev.Cantidad.ToString("N0") pzas
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div style="padding:20px;text-align:center;color:var(--text-muted);">No hay eventos programados para este
+                                día.</div>
+                            }
+                        </div>
+                    </div>
+                }
+    else if (granularidad == "semanal")
+                {
+                    <!-- VISTA SEMANAL (7 DÍAS) -->
+                    <div class="cal-header">
+                        <div>Lun</div>
+                        <div>Mar</div>
+                        <div>Mié</div>
+                        <div>Jue</div>
+                        <div>Vie</div>
+                        <div>Sáb</div>
+                        <div>Dom</div>
+                    </div>
+                    <div class="cal-grid-semanal">
+                        @for (int s = 0; s < 7; s++)
+                        {
+                            var diaSemana = fechaBase.AddDays(s);
+                            var eventosSemana = Model?.Eventos?.Where(e => e.Fecha.Date == diaSemana.Date).ToList() ?? new();
+
+                            <div class="cal-cell @(diaSemana.Date == DateTime.Today ? "today" : "")">
+                                <div class="cal-day-num">@diaSemana.ToString("ddd dd")</div>
+                                @foreach (var ev in eventosSemana)
+                                {
+                                    string turnoUpper = (ev.TurnoClave ?? "").ToUpperInvariant();
+                                    string claseTurno = "turno-matutino";
+                                    if (turnoUpper.Contains("2") || turnoUpper.Contains("VESP")) claseTurno = "turno-vespertino";
+                                    else if (turnoUpper.Contains("3") || turnoUpper.Contains("NOCT")) claseTurno = "turno-nocturno";
+                                    else if (turnoUpper.Contains("12H")) claseTurno = "turno-12h";
+
+                                    string estatusLower = (ev.Estado ?? "pendiente").ToLowerInvariant();
+                                    string claseEstado = estatusLower switch
+                                    {
+                                        "terminado" or "completado" => "estado-terminado",
+                                        "activo" or "en proceso" or "en curso" => "estado-activo",
+                                        _ => "estado-pendiente"
+                                    };
+                                    string badgeEstadoClass = estatusLower switch
+                                    {
+                                        "terminado" or "completado" => "badge-estado-terminado",
+                                        "activo" or "en proceso" or "en curso" => "badge-estado-activo",
+                                        _ => "badge-estado-pendiente"
+                                    };
+
+                                    <div class="card-evento @claseTurno @claseEstado" style="cursor:pointer;"
+                                         onclick="abrirModalParos(@ev.Id, '@ev.ProyectoCodigo', '@ev.LineaNombre', '@ev.CeldaCodigo', @ev.Horas)">
+                                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                                            <strong style="font-size:11px; color:var(--text);">@ev.ProyectoCodigo</strong>
+                                            <span class="badge-estado @badgeEstadoClass">@(ev.Estado ?? "Pendiente")</span>
+                                        </div>
+                                        <div style="font-size:10px; color:var(--text-muted); margin:2px 0;">@ev.LineaNombre / @ev.CeldaCodigo
+                                        </div>
+                                        <div style="margin-top:4px; display:flex; justify-content:space-between; align-items:center;">
+                                            <span style="font-size:10px; font-weight:700; color:var(--text);">@ev.TurnoClave</span>
+                                            <span class="horas-pill">@ev.Horas h</span>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
                 }
                 else
                 {
-                    <div style="padding:20px;text-align:center;color:var(--text-muted);">No hay eventos programados para este día.</div>
-                }
-            </div>
-        </div>
-    }
-    else if (granularidad == "semanal")
-    {
-        <!-- VISTA SEMANAL (7 DÍAS) -->
-        <div class="cal-header">
-            <div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div><div>Dom</div>
-        </div>
-        <div class="cal-grid-semanal">
-            @for (int s = 0; s < 7; s++)
-            {
-                var diaSemana = fechaBase.AddDays(s);
-                var eventosSemana = Model?.Eventos?.Where(e => e.Fecha.Date == diaSemana.Date).ToList() ?? new();
-
-                <div class="cal-cell @(diaSemana.Date == DateTime.Today ? "today" : "")">
-                    <div class="cal-day-num">@diaSemana.ToString("ddd dd")</div>
-                    @foreach (var ev in eventosSemana)
-                    {
-                        string claseCss = "t1";
-                        string turnoUpper = (ev.TurnoClave ?? "").ToUpperInvariant();
-                        if (turnoUpper.Contains("2") || turnoUpper.Contains("VESP")) claseCss = "t2";
-                        else if (turnoUpper.Contains("3") || turnoUpper.Contains("NOCT")) claseCss = "t3";
-
-                        <div class="cal-event cal-event-@claseCss" onclick="openModal()">
-                            <div class="cal-event-title">@ev.ProyectoCodigo</div>
-                            <div class="cal-event-meta">@ev.LineaNombre / @ev.CeldaCodigo / @ev.SapPartNumber</div>
-                            <div style="margin-top:2px;display:flex;gap:3px;align-items:center;">
-                                <span class="badge badge-@claseCss" style="font-size:9px">@ev.TurnoClave</span>
-                                <span class="badge badge-programado" style="font-size:9px">@ev.Horas h</span>
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
-        </div>
-    }
-    else
-    {
-        <!-- VISTA MENSUAL -->
-        <div class="cal-header">
-            <div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div><div>Dom</div>
-        </div>
-        <div class="cal-grid">
-            @for (int i = totalCeldasPrevias; i >= 1; i--)
-            {
-                int numDiaPrevio = diasMesAnterior - i + 1;
-                <div class="cal-cell other-month">
-                    <div class="cal-day-num">@numDiaPrevio</div>
-                </div>
-            }
-
-            @for (int dia = 1; dia <= diasEnMes; dia++)
-            {
-                var fechaActual = new DateTime(primerDiaMes.Year, primerDiaMes.Month, dia);
-                var eventosDelDia = Model?.Eventos?.Where(e => e.Fecha.Date == fechaActual.Date).ToList() ?? new();
-
-                <div class="cal-cell @(fechaActual.Date == DateTime.Today ? "today" : "")">
-                    <div class="cal-day-num">@dia</div>
-                    @if (eventosDelDia.Any())
-                    {
-                        @foreach (var ev in eventosDelDia)
+                    <!-- VISTA MENSUAL -->
+                    <div class="cal-header">
+                        <div>Lun</div>
+                        <div>Mar</div>
+                        <div>Mié</div>
+                        <div>Jue</div>
+                        <div>Vie</div>
+                        <div>Sáb</div>
+                        <div>Dom</div>
+                    </div>
+                    <div class="cal-grid">
+                        @for (int i = totalCeldasPrevias; i >= 1; i--)
                         {
-                            string claseCss = "t1";
-                            string turnoUpper = (ev.TurnoClave ?? "").ToUpperInvariant();
-                            if (turnoUpper.Contains("2") || turnoUpper.Contains("VESP")) claseCss = "t2";
-                            else if (turnoUpper.Contains("3") || turnoUpper.Contains("NOCT")) claseCss = "t3";
-
-                            <div class="cal-event cal-event-@claseCss" onclick="openModal()">
-                                <div class="cal-event-title">@ev.ProyectoCodigo</div>
-                                <div class="cal-event-meta">@ev.LineaNombre / @ev.CeldaCodigo / @ev.SapPartNumber</div>
-                                <div style="margin-top:2px;display:flex;gap:3px;align-items:center;">
-                                    <span class="badge badge-@claseCss" style="font-size:9px">@ev.TurnoClave</span>
-                                    <span class="badge badge-programado" style="font-size:9px">@ev.Horas h</span>
-                                </div>
+                            int numDiaPrevio = diasMesAnterior - i + 1;
+                            <div class="cal-cell other-month">
+                                <div class="cal-day-num">@numDiaPrevio</div>
                             </div>
                         }
-                    }
-                </div>
-            }
 
-            @{
-                int totalCeldasActuales = totalCeldasPrevias + diasEnMes;
-                int celdasRestantes = (7 - (totalCeldasActuales % 7)) % 7;
-            }
-            @for (int j = 1; j <= celdasRestantes; j++)
-            {
-                <div class="cal-cell other-month">
-                    <div class="cal-day-num">@j</div>
-                </div>
-            }
-        </div>
-    }
-</div>
+                        @for (int dia = 1; dia <= diasEnMes; dia++)
+                        {
+                            var fechaActual = new DateTime(primerDiaMes.Year, primerDiaMes.Month, dia);
+                            var eventosDelDia = Model?.Eventos?.Where(e => e.Fecha.Date == fechaActual.Date).ToList() ?? new();
+
+                            <div class="cal-cell @(fechaActual.Date == DateTime.Today ? "today" : "")">
+                                <div class="cal-day-num">@dia</div>
+                                @if (eventosDelDia.Any())
+                                {
+                                    @foreach (var ev in eventosDelDia)
+                                    {
+                                        string turnoUpper = (ev.TurnoClave ?? "").ToUpperInvariant();
+                                        string claseTurno = "turno-matutino";
+                                        if (turnoUpper.Contains("2") || turnoUpper.Contains("VESP")) claseTurno = "turno-vespertino";
+                                        else if (turnoUpper.Contains("3") || turnoUpper.Contains("NOCT")) claseTurno = "turno-nocturno";
+                                        else if (turnoUpper.Contains("12H")) claseTurno = "turno-12h";
+
+                                        string estatusLower = (ev.Estado ?? "pendiente").ToLowerInvariant();
+                                        string claseEstado = estatusLower switch
+                                        {
+                                            "terminado" or "completado" => "estado-terminado",
+                                            "activo" or "en proceso" or "en curso" => "estado-activo",
+                                            _ => "estado-pendiente"
+                                        };
+                                        string badgeEstadoClass = estatusLower switch
+                                        {
+                                            "terminado" or "completado" => "badge-estado-terminado",
+                                            "activo" or "en proceso" or "en curso" => "badge-estado-activo",
+                                            _ => "badge-estado-pendiente"
+                                        };
+
+                                        <div class="card-evento @claseTurno @claseEstado" style="cursor:pointer;"
+                                             onclick="abrirModalParos(@ev.Id, '@ev.ProyectoCodigo', '@ev.LineaNombre', '@ev.CeldaCodigo', @ev.Horas, '@ev.SapPartNumber')">
+                                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                                <strong style="font-size:11px; color:var(--text);">@ev.ProyectoCodigo</strong>
+                                                <span class="badge-estado @badgeEstadoClass">@(ev.Estado ?? "Pendiente")</span>
+                                            </div>
+
+                                            <!-- Mostrar el No. de Parte para diferenciarlos claramente -->
+                                            <div style="font-size:10.5px; font-weight:700; color:var(--accent); margin:2px 0;">
+                                                @ev.SapPartNumber
+                                            </div>
+
+                                            <div style="font-size:9.5px; color:var(--text-muted);">@ev.LineaNombre / @ev.CeldaCodigo</div>
+
+                                            <div style="margin-top:3px; display:flex; justify-content:space-between; align-items:center;">
+                                                <span style="font-size:9px; font-weight:700; color:var(--text);">@ev.TurnoClave</span>
+                                                <span class="horas-pill">@ev.Horas h</span>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        }
+
+                        @{
+                            int totalCeldasActuales = totalCeldasPrevias + diasEnMes;
+                            int celdasRestantes = (7 - (totalCeldasActuales % 7)) % 7;
+                        }
+                        @for (int j = 1; j <= celdasRestantes; j++)
+                        {
+                            <div class="cal-cell other-month">
+                                <div class="cal-day-num">@j</div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- MODAL DE DETALLE Y GESTIÓN DE PAROS DEL PROYECTO -->
+            <div id="modalParosOverlay"
+                 style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:300; align-items:center; justify-content:center; padding:16px;">
+                <div
+                    style="background:var(--surface); border-radius:12px; padding:24px; width:100%; max-width:580px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+
+                    <!-- Cabecera del Modal -->
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
+                        <div>
+                            <h3 id="modalProgTitulo" style="font-size:16px; font-weight:700; margin:0; color:var(--text);">Registro
+                                de Incidencias / Paros</h3>
+                                <span id="modalProgSubtitulo" style="font-size:12px; color:var(--text-muted);">Proyecto - Línea /
+                                    Celda</span>
+                                </div>
+                                <button type="button" onclick="cerrarModalParos()"
+                                        style="background:none; border:none; font-size:20px; cursor:pointer; color:var(--text-muted);">&times;</button>
+                            </div>
+
+                            <!-- Ficha Resumen de la Corrida -->
+                            <div
+                                style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:16px; background:var(--surface2); padding:12px; border-radius:8px;">
+                                <div>
+                                    <span style="font-size:10px; color:var(--text-muted); font-weight:700; display:block;">HORAS
+                                        TURNO</span>
+                                        <div id="lblModalHorasProg" style="font-size:15px; font-weight:800; color:var(--text);">0.00 h</div>
+                                    </div>
+                                    <div>
+                                        <span style="font-size:10px; color:var(--warning); font-weight:700; display:block;">TOTAL PAROS</span>
+                                        <div id="lblModalTotalParos" style="font-size:15px; font-weight:800; color:var(--warning);">0 min</div>
+                                    </div>
+                                    <div>
+                                        <span style="font-size:10px; color:var(--success); font-weight:700; display:block;">TIEMPO
+                                            EFECTIVO</span>
+                                            <div id="lblModalTiempoNeto" style="font-size:15px; font-weight:800; color:var(--success);">0.00 h</div>
+                                        </div>
+                                    </div>
+
+                                    <form id="formParosProyecto" onsubmit="guardarParosProyecto(event)">
+                                        <input type="hidden" id="modalProgId" name="programacionId" value="0" />
+
+                                        <!-- Tabla Dinámica de Paros -->
+                                        <div style="margin-bottom:16px;">
+                                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                                <label style="font-size:11px; font-weight:700; color:var(--text-muted); margin:0;">INCIDENCIAS /
+                                                    PAROS REGISTRADOS</label>
+                                                    <button type="button" class="btn btn-secondary btn-sm" onclick="agregarFilaParoProyecto()">+ Agregar
+                                                        Paro</button>
+                                                    </div>
+
+                                                    <div class="table-wrap">
+                                                        <table style="font-size:12px;">
+                                                            <thead>
+                                                                <tr style="background:var(--surface2);">
+                                                                    <th>Motivo / Razón</th>
+                                                                    <th style="width:110px;">Duración (min)</th>
+                                                                    <th style="width:120px;">Tipo</th>
+                                                                    <th style="width:40px;"></th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody id="listaParosProyectoBody">
+                                                                <!-- Filas dinámicas -->
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+
+                                                    <div id="alertaExcesoModal"
+                                                         style="display:none; color:var(--danger); font-size:11.5px; font-weight:700; margin-top:8px;">
+                                                        ⚠ Los paros no pueden superar el tiempo total programado del turno.
+                                                    </div>
+                                                </div>
+
+                                                <!-- Botones de Acción -->
+                                                <div
+                                                    style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--border); padding-top:14px;">
+                                                    <button type="button" class="btn btn-secondary" onclick="cerrarModalParos()">Cerrar</button>
+                                                    <button type="submit" id="btnGuardarParosProg" class="btn btn-primary">Guardar Paros</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+
+                                    @section Scripts {
+                                        <script>
+                                            let indexParoProg = 0;
+                                            let horasProgActuales = 0;
+
+                                            function cerrarModalParos() {
+                                                document.getElementById('modalParosOverlay').style.display = 'none';
+                                            }
+
+                                            function abrirModalParos(id, proyecto, linea, celda, horas) {
+                                                document.getElementById('modalProgId').value = id;
+                                                document.getElementById('modalProgTitulo').innerText = `Paros — ${proyecto}`;
+                                                document.getElementById('modalProgSubtitulo').innerText = `${linea} / ${celda} — ${horas} hrs planeadas`;
+
+                                                horasProgActuales = parseFloat(horas) || 0;
+                                                document.getElementById('lblModalHorasProg').innerText = `${horasProgActuales.toFixed(2)} h`;
+
+                                                const tbody = document.getElementById('listaParosProyectoBody');
+                                                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:10px; color:var(--text-muted);">Cargando paros...</td></tr>';
+                                                document.getElementById('modalParosOverlay').style.display = 'flex';
+
+                                                // Consultar paros existentes de esa programación
+                                                fetch(`/Calendario/ObtenerParosProgramacion?programacionId=${id}`)
+                                                    .then(r => r.json())
+                                                    .then(data => {
+                                                        tbody.innerHTML = '';
+                                                        indexParoProg = 0;
+
+                                                        if (data && data.length > 0) {
+                                                            data.forEach(p => agregarFilaParoProyecto(p.tipoParo, p.duracionMinutos, p.esProgramado, p.id));
+                                                        } else {
+                                                            // Si no hay paros registrados, dejar la tabla limpia
+                                                            tbody.innerHTML = '<tr id="filaSinParos"><td colspan="4" style="text-align:center; padding:12px; color:var(--text-muted); font-size:11.5px;">Sin paros registrados. Haz clic en <strong>+ Agregar Paro</strong> para capturar una incidencia.</td></tr>';
+                                                        }
+                                                        recalcularTiemposModal();
+                                                    })
+                                                    .catch(() => {
+                                                        tbody.innerHTML = '<tr id="filaSinParos"><td colspan="4" style="text-align:center; padding:12px; color:var(--text-muted); font-size:11.5px;">Sin paros registrados.</td></tr>';
+                                                        recalcularTiemposModal();
+                                                    });
+                                            }
+
+                                            function agregarFilaParoProyecto(motivo = '', minutos = 15, esProgramado = false, paroId = 0) {
+                                                const tbody = document.getElementById('listaParosProyectoBody');
+                                                const filaVacia = document.getElementById('filaSinParos');
+                                                if (filaVacia) filaVacia.remove();
+
+                                                const tr = document.createElement('tr');
+                                                tr.className = 'fila-paro-prog';
+                                                tr.innerHTML = `
+                                                <td>
+                                                    <input type="hidden" class="p-id" value="${paroId}" />
+                                                    <input type="text" class="form-control form-control-sm p-motivo" placeholder="Ej. Falla de máquina / Setup" value="${motivo}" required style="padding:4px 8px; font-size:12px; width:100%;" />
+                                                </td>
+                                                <td>
+                                                    <!-- oninput y onchange aseguran que recalcule tanto al teclear como al usar las flechitas -->
+                                                    <input type="number" class="form-control form-control-sm p-minutos" min="1" value="${minutos}" 
+                                                           oninput="recalcularTiemposModal()" onchange="recalcularTiemposModal()" required style="padding:4px 8px; font-size:12px; width:100%;" />
+                                                </td>
+                                                <td>
+                                                    <select class="form-select form-select-sm p-tipo" style="padding:4px 8px; font-size:12px; width:100%;">
+                                                        <option value="false" ${!esProgramado ? 'selected' : ''}>No Prog. (Falla)</option>
+                                                        <option value="true" ${esProgramado ? 'selected' : ''}>Programado</option>
+                                                    </select>
+                                                </td>
+                                                <td style="text-align:center;">
+                                                    <button type="button" class="btn btn-danger btn-sm" style="padding:2px 6px; font-size:11px;" onclick="eliminarFilaParoProyecto(this)">✕</button>
+                                                </td>
+                                            `;
+                                                tbody.appendChild(tr);
+                                                indexParoProg++;
+
+                                                // Recalcular inmediatamente al insertar la fila
+                                                recalcularTiemposModal();
+                                            }
+
+                                            function eliminarFilaParoProyecto(btn) {
+                                                btn.closest('tr').remove();
+                                                recalcularTiemposModal();
+                                            }
+
+                                            function recalcularTiemposModal() {
+                                                // Asegurar que horasProgActuales tenga un valor numérico válido
+                                                let horasBase = parseFloat(horasProgActuales) || 0;
+                                                let minutosTotalesProg = Math.round(horasBase * 60);
+                                                let totalParoMinutos = 0;
+
+                                                // Sumar todos los inputs con clase .p-minutos
+                                                document.querySelectorAll('.p-minutos').forEach(input => {
+                                                    let val = parseInt(input.value, 10);
+                                                    if (!isNaN(val) && val > 0) {
+                                                        totalParoMinutos += val;
+                                                    }
+                                                });
+
+                                                let tiempoNetoMinutos = minutosTotalesProg - totalParoMinutos;
+                                                let alerta = document.getElementById('alertaExcesoModal');
+                                                let btnGuardar = document.getElementById('btnGuardarParosProg');
+                                                let lblTiempo = document.getElementById('lblModalTiempoNeto');
+                                                let lblParos = document.getElementById('lblModalTotalParos');
+
+                                                // 1. Actualizar el indicador de paros
+                                                if (lblParos) {
+                                                    lblParos.innerText = `${totalParoMinutos} min (${(totalParoMinutos / 60).toFixed(2)} h)`;
+                                                }
+
+                                                // 2. Evaluar y actualizar tiempo efectivo
+                                                if (tiempoNetoMinutos < 0) {
+                                                    if (alerta) alerta.style.display = 'block';
+                                                    if (btnGuardar) btnGuardar.disabled = true;
+                                                    if (lblTiempo) {
+                                                        lblTiempo.style.color = 'var(--danger)';
+                                                        lblTiempo.innerText = '0.00 h (Excedido)';
+                                                    }
+                                                } else {
+                                                    if (alerta) alerta.style.display = 'none';
+                                                    if (btnGuardar) btnGuardar.disabled = false;
+
+                                                    let horasDecimal = tiempoNetoMinutos / 60;
+                                                    let hEnteras = Math.floor(tiempoNetoMinutos / 60);
+                                                    let mRestantes = tiempoNetoMinutos % 60;
+
+                                                    if (lblTiempo) {
+                                                        lblTiempo.style.color = 'var(--success)';
+                                                        lblTiempo.innerText = `${horasDecimal.toFixed(2)} h (${hEnteras}h ${mRestantes}m)`;
+                                                    }
+                                                }
+                                            }
+
+                                            function guardarParosProyecto(e) {
+                                                e.preventDefault();
+                                                const programacionId = document.getElementById('modalProgId').value;
+
+                                                let paros = [];
+                                                document.querySelectorAll('.fila-paro-prog').forEach(row => {
+                                                    paros.push({
+                                                        id: parseInt(row.querySelector('.p-id').value) || 0,
+                                                        programacionId: parseInt(programacionId),
+                                                        tipoParo: row.querySelector('.p-motivo').value,
+                                                        duracionMinutos: parseInt(row.querySelector('.p-minutos').value) || 0,
+                                                        esProgramado: row.querySelector('.p-tipo').value === 'true'
+                                                    });
+                                                });
+
+                                                fetch('/Calendario/GuardarParosProgramacion', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ programacionId: parseInt(programacionId), paros: paros })
+                                                })
+                                                    .then(r => r.json())
+                                                    .then(res => {
+                                                        if (res.success) {
+                                                            cerrarModalParos();
+                                                            location.reload();
+                                                        } else {
+                                                            alert(res.message || 'Error al guardar paros.');
+                                                        }
+                                                    })
+                                                    .catch(() => {
+                                                        alert('Ocurrió un error al procesar la solicitud.');
+                                                    });
+                                            }
+                                        </script>
+                                    }

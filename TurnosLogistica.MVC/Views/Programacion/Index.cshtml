@@ -5,7 +5,6 @@
 }
 
 <style>
-    /* Multi-select personalizado para celdas */
     .dropdown-multiselect {
         position: relative;
     }
@@ -133,14 +132,15 @@
             Datos de la Programación
         </h4>
 
-        <!-- BLOQUE 1: PROYECTO Y LÍNEA -->
+        <!-- PROYECTO Y LÍNEA -->
         <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
             <!-- PROYECTO -->
             <div class="form-group">
                 <label class="form-label"
                        style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px;">PROYECTO
                     *</label>
-                    <select id="selProyecto" name="ProyectoId" class="form-control" required>
+                    <select id="selProyecto" name="ProyectoId" class="form-control" onchange="cargarLineas(this.value)"
+                            required>
                         <option value="">-- Seleccione Proyecto --</option>
                         @foreach (var p in proyectos)
                         {
@@ -154,15 +154,15 @@
                     <label class="form-label"
                            style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px;">LÍNEA
                         *</label>
-                        <select id="selLinea" name="LineaId" class="form-control" required>
+                        <select id="selLinea" name="LineaId" class="form-control" onchange="cargarCeldas(this.value)" required>
                             <option value="">-- Seleccione Proyecto Primero --</option>
                         </select>
                     </div>
                 </div>
 
-                <!-- BLOQUE 2: CELDAS Y FECHAS -->
+                <!-- CELDAS Y FECHAS -->
                 <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
-                    <!-- CELDAS (MULTISELECCIÓN O INDIVIDUAL) -->
+                    <!-- CELDAS -->
                     <div class="form-group">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                             <label class="form-label mb-0" style="font-size:11px;font-weight:700;color:var(--text-muted);">CELDA
@@ -250,7 +250,7 @@
                                                 </div>
                                             </div>
 
-                                            <!-- BLOQUE 3: NÚMERO DE PARTE -->
+                                            <!-- NÚMERO DE PARTE -->
                                             <div class="form-group" style="margin-top:16px;">
                                                 <label class="form-label"
                                                        style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px;">NÚMERO
@@ -260,7 +260,7 @@
                                                     </select>
                                                 </div>
 
-                                                <!-- BLOQUE 4: SELECTOR DE TURNOS -->
+                                                <!-- TURNO -->
                                                 <div class="form-group" style="margin-top:16px;">
                                                     <label class="form-label"
                                                            style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;">TURNO
@@ -272,8 +272,8 @@
                                                                 foreach (var t in ViewBag.Turnos)
                                                                 {
                                                                     <label style="cursor:pointer;display:flex;align-items:center;gap:6px;font-size:13px;">
-                                                                        <input type="radio" name="TurnoId" value="@t.Id" @(index == 0 ? "checked" : "")
-                                                                               onchange="actualizarHorasEstimadas(@t.Horas)" />
+                                                                        <!-- Se eliminó el onchange para que no modifique la caja de texto -->
+                                                                        <input type="radio" name="TurnoId" value="@t.Id" @(index == 0 ? "checked" : "") />
                                                                         <span class="badge badge-@t.ClaseColor">@t.Nombre</span> (@t.Horario)
                                                                     </label>
                                                                     index++;
@@ -286,10 +286,9 @@
                                                         </div>
                                                     </div>
 
-                                                    <!-- BLOQUE 5: CANTIDAD Y TIEMPO ESTIMADO PERFECTAMENTE ALINEADOS -->
+                                                    <!-- CANTIDAD Y TIEMPO ESTIMADO -->
                                                     <div class="form-grid"
                                                          style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px; align-items:start;">
-                                                        <!-- CANTIDAD A PRODUCIR -->
                                                         <div class="form-group" style="margin:0;">
                                                             <label class="form-label"
                                                                    style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:6px;">
@@ -299,18 +298,19 @@
                                                                    placeholder="Ej. 450" min="1" required style="width:100%; height:38px; box-sizing:border-box;" />
                                                         </div>
 
-                                                        <!-- TIEMPO ESTIMADO -->
                                                         <div class="form-group" style="margin:0;">
                                                             <label class="form-label"
                                                                    style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:6px;">
-                                                                TIEMPO ESTIMADO (HRS)
+                                                                TIEMPO ESTIMADO (HRS) *
                                                             </label>
-                                                            <input type="number" id="txtTiempoEstimado" name="TiempoEstimadoHoras" step="0.5" class="form-control"
-                                                                   value="8" style="width:100%; height:38px; box-sizing:border-box;" />
+                                                            <!-- Sin valor fijo ni sobreescritura automática -->
+                                                            <input type="number" id="txtTiempoEstimado" name="TiempoEstimadoHoras" step="0.1" min="0.1"
+                                                                   class="form-control" placeholder="Ej. 8" required
+                                                                   style="width:100%; height:38px; box-sizing:border-box;" />
                                                         </div>
                                                     </div>
 
-                                                    <!-- BLOQUE 6: RAZÓN OBLIGATORIA (ANCHO COMPLETO) -->
+                                                    <!-- RAZÓN OBLIGATORIA -->
                                                     <div class="form-group" style="margin-top:16px;">
                                                         <label class="form-label"
                                                                style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:6px;">
@@ -321,7 +321,7 @@
                                                                   style="width:100%; box-sizing:border-box;"></textarea>
                                                     </div>
 
-                                                    <!-- BLOQUE 7: BOTONES DE ACCIÓN -->
+                                                    <!-- ACCIONES -->
                                                     <div style="margin-top:24px; display:flex; gap:10px;">
                                                         <button type="submit" id="btnSubmitProgramacion" class="btn btn-primary"
                                                                 style="padding:10px 24px; font-weight:700;">Guardar Programación</button>
@@ -336,23 +336,6 @@
                                                     let modoFechaActual = 'dia';
                                                     let celdasDisponibles = [];
                                                     let diasSalteados = [];
-
-                                                    document.addEventListener('DOMContentLoaded', () => {
-                                                        const selProyecto = document.getElementById('selProyecto');
-                                                        const selLinea = document.getElementById('selLinea');
-
-                                                        if (selProyecto) {
-                                                            selProyecto.addEventListener('change', (e) => {
-                                                                cargarLineas(e.target.value);
-                                                            });
-                                                        }
-
-                                                        if (selLinea) {
-                                                            selLinea.addEventListener('change', (e) => {
-                                                                cargarCeldas(e.target.value);
-                                                            });
-                                                        }
-                                                    });
 
                                                     // 1. CARGAR LÍNEAS
                                                     async function cargarLineas(proyectoId) {
@@ -429,11 +412,11 @@
                                                                     const id = item.id || item.Id;
                                                                     const texto = item.texto || item.Texto;
                                                                     return `
-                                                                        <label class="multiselect-item">
-                                                                            <input type="checkbox" class="chk-celda" value="${id}" data-nombre="${texto}" onchange="actualizarTextoCeldas()" />
-                                                                            <span>${texto}</span>
-                                                                        </label>
-                                                                    `;
+                                                                                                                        <label class="multiselect-item">
+                                                                                                                            <input type="checkbox" class="chk-celda" value="${id}" data-nombre="${texto}" onchange="actualizarTextoCeldas()" />
+                                                                                                                            <span>${texto}</span>
+                                                                                                                        </label>
+                                                                                                                    `;
                                                                 }).join('');
                                                             }
                                                         } catch (err) {
@@ -570,11 +553,11 @@
                                                             const d = new Date(f + 'T00:00:00');
                                                             const formato = d.toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: 'short' });
                                                             return `
-                                                                <span class="chip-dia">
-                                                                    ${formato}
-                                                                    <button type="button" onclick="removerDiaSalteado('${f}')" title="Quitar fecha">&times;</button>
-                                                                </span>
-                                                            `;
+                                                                                                                <span class="chip-dia">
+                                                                                                                    ${formato}
+                                                                                                                    <button type="button" onclick="removerDiaSalteado('${f}')" title="Quitar fecha">&times;</button>
+                                                                                                                </span>
+                                                                                                            `;
                                                         }).join('');
                                                     }
 
@@ -615,7 +598,7 @@
                                                             const f = document.getElementById('txtFechaIndividual')?.value;
                                                             if (f) lista.push(f);
                                                         }
-                                  |                      else if (modoFechaActual === 'salteados') {
+                                                        else if (modoFechaActual === 'salteados') {
                                                             return [...diasSalteados];
                                                         }
                                                         else if (modoFechaActual === 'semana') {
@@ -663,12 +646,10 @@
                                                             return false;
                                                         }
 
-                                                        // Si es 1 sola celda y 1 solo día, procesar vía POST normal
                                                         if (celdasSeleccionadas.length === 1 && fechas.length === 1 && modoFechaActual === 'dia') {
                                                             return true;
                                                         }
 
-                                                        // Si son múltiples celdas o varias fechas, procesar vía AJAX
                                                         event.preventDefault();
 
                                                         const selTurno = document.querySelector('input[name="TurnoId"]:checked');
@@ -728,11 +709,6 @@
                                                         return false;
                                                     }
 
-                                                    function actualizarHorasEstimadas(horas) {
-                                                        const inputHoras = document.getElementById('txtTiempoEstimado');
-                                                        if (inputHoras) {
-                                                            inputHoras.value = horas;
-                                                        }
-                                                    }
+                                         
                                                 </script>
                                             }
