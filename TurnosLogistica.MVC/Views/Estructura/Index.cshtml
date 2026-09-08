@@ -1,6 +1,33 @@
 @model TurnosLogistica.MVC.Models.EstructuraViewModel
 @{
     ViewData["Title"] = "Gestión de Estructura";
+
+    // =============================================================
+    // EVALUACIÓN DE AISLAMIENTO MULTIPLANTA
+    // =============================================================
+    int plantaAsignadaId = 1;
+    if (int.TryParse(User.FindFirst("PlantaAsignadaId")?.Value, out int pAsig))
+    {
+        plantaAsignadaId = pAsig;
+    }
+
+    int nivelUsuario = 10;
+    if (int.TryParse(User.FindFirst("NivelJerarquico")?.Value, out int nVal))
+    {
+        nivelUsuario = nVal;
+    }
+
+    string rolUsuario = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.ToLower() ?? "operador";
+
+    int plantaActivaId = Model?.PlantaId ?? 1;
+    if (Context.Request.Cookies.TryGetValue("PlantaActivaId", out string? cookieVal) && int.TryParse(cookieVal, out int parsedId))
+    {
+        plantaActivaId = parsedId;
+    }
+
+    bool esPlantaForanea = (plantaActivaId != plantaAsignadaId);
+    bool esPersonalSistemas = (nivelUsuario >= 40 || rolUsuario == "sistemas");
+    bool soloLectura = esPlantaForanea && !esPersonalSistemas;
 }
 
 <div class="page-header">
@@ -16,7 +43,18 @@
     <div class="card" style="padding:20px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
             <div class="card-title" style="margin:0;">Árbol de Estructura</div>
-            <button type="button" class="btn btn-primary btn-sm" onclick="abrirModalNodo()">+ Nodo</button>
+            @if (soloLectura)
+            {
+                <button type="button" class="btn btn-secondary btn-sm" disabled 
+                        style="opacity:0.55; cursor:not-allowed;" 
+                        title="Modo Solo Lectura: Tu planta asignada es la Planta @plantaAsignadaId. En Planta @plantaActivaId la edición está bloqueada.">
+                    🔒 + Nodo
+                </button>
+            }
+            else
+            {
+                <button type="button" class="btn btn-primary btn-sm" onclick="abrirModalNodo()">+ Nodo</button>
+            }
         </div>
 
         <ul class="tree" style="margin:0; padding-left:0;">
@@ -111,7 +149,16 @@
             <span style="color:var(--text-muted); font-size:12px;">Seleccione una celda para ver y gestionar sus números de parte.</span>
         </div>
 
-        <button type="button" class="btn btn-primary" onclick="guardarAsignacionMensaje()">Guardar asignación</button>
+        @if (soloLectura)
+        {
+            <button type="button" class="btn btn-secondary" disabled style="opacity:0.55; cursor:not-allowed;" title="Modo Solo Lectura: Modificaciones deshabilitadas">
+                🔒 Guardar asignación (Solo Lectura)
+            </button>
+        }
+        else
+        {
+            <button type="button" class="btn btn-primary" onclick="guardarAsignacionMensaje()">Guardar asignación</button>
+        }
     </div>
 
 </div>
@@ -126,11 +173,18 @@
                     style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--text-muted);">&times;</button>
         </div>
 
+        @if (soloLectura)
+        {
+            <div style="background:#fffbeb; border:1px solid #fde68a; color:#92400e; padding:8px 12px; border-radius:6px; font-size:12px; margin-bottom:12px;">
+                🔒 <strong>Modo Solo Lectura:</strong> No se pueden agregar nodos a la estructura de otra planta.
+            </div>
+        }
+
         <form asp-controller="Estructura" asp-action="AgregarNodo" method="post">
             @Html.AntiForgeryToken()
             <div class="form-group" style="margin-bottom:12px;">
                 <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">NIVEL JERÁRQUICO *</label>
-                <select name="tipoNodo" id="tipoNodo" class="form-control" onchange="cambiarPadreSegunTipo(this.value)" required>
+                <select name="tipoNodo" id="tipoNodo" class="form-control" onchange="cambiarPadreSegunTipo(this.value)" @(soloLectura ? "disabled" : "") required>
                     <option value="proyecto" selected>Proyecto</option>
                     <option value="linea">Línea</option>
                     <option value="celda">Celda (Workcenter)</option>
@@ -138,12 +192,12 @@
                 </select>
             </div>
 
-            <!-- SELECTOR DE PROYECTO EXISTENTE (Visible solo si Nivel = Proyecto) -->
+            <!-- SELECTOR DE PROYECTO EXISTENTE -->
             <div class="form-group" id="grupoProyectoExistente" style="margin-bottom:12px; display:none;">
                 <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">
                     SELECCIONAR PROYECTO EXISTENTE O CREAR *
                 </label>
-                <select id="selectProyectoExistente" class="form-control" onchange="alCambiarProyectoExistente(this.value)">
+                <select id="selectProyectoExistente" class="form-control" onchange="alCambiarProyectoExistente(this.value)" @(soloLectura ? "disabled" : "")>
                     <option value="nuevo">+ Crear Nuevo Proyecto...</option>
                 </select>
                 <small style="font-size:10.5px; color:var(--text-muted); display:block; margin-top:3px;">
@@ -151,18 +205,18 @@
                 </small>
             </div>
 
-            <!-- PADRE (Visible si Nivel = Línea, Celda o Estación) -->
+            <!-- PADRE -->
             <div class="form-group" id="grupoPadre" style="margin-bottom:12px; display:none;">
                 <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;" id="lblPadre">PADRE *</label>
-                <select name="padreId" id="padreId" class="form-control" onchange="alCambiarPadreGeneral(this.value)"></select>
+                <select name="padreId" id="padreId" class="form-control" onchange="alCambiarPadreGeneral(this.value)" @(soloLectura ? "disabled" : "")></select>
             </div>
 
-            <!-- SELECTOR DE LÍNEAS EXISTENTES DEL PROYECTO (Visible solo si Nivel = Línea) -->
+            <!-- SELECTOR DE LÍNEAS EXISTENTES -->
             <div class="form-group" id="grupoLineaExistente" style="margin-bottom:12px; display:none;">
                 <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">
                     LÍNEAS ASOCIADAS A ESTE PROYECTO
                 </label>
-                <select id="selectLineaExistente" class="form-control" onchange="alCambiarLineaExistente(this.value)">
+                <select id="selectLineaExistente" class="form-control" onchange="alCambiarLineaExistente(this.value)" @(soloLectura ? "disabled" : "")>
                     <option value="nueva">+ Crear Nueva Línea...</option>
                 </select>
                 <small style="font-size:10.5px; color:var(--text-muted); display:block; margin-top:3px;">
@@ -176,7 +230,7 @@
                     CÓDIGO *
                 </label>
                 <input type="text" id="txtCodigoNodo" name="codigo" class="form-control" list="listaWorkCentersBD"
-                       placeholder="Ej. PRY-CX727" required style="font-weight:700; letter-spacing:0.5px;" />
+                       placeholder="Ej. PRY-CX727" required @(soloLectura ? "disabled" : "") style="font-weight:700; letter-spacing:0.5px;" />
                 <datalist id="listaWorkCentersBD"></datalist>
                 <small id="helpCodigoNodo" style="font-size:10.5px; color:var(--text-muted); display:block; margin-top:3px;">
                     Código identificador del proyecto.
@@ -185,12 +239,15 @@
 
             <div class="form-group" style="margin-bottom:16px;">
                 <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">NOMBRE *</label>
-                <input type="text" id="txtNombreNodo" name="nombre" class="form-control" placeholder="Ej. Ford CX727 (Mustang Mach-E)" required />
+                <input type="text" id="txtNombreNodo" name="nombre" class="form-control" placeholder="Ej. Ford CX727 (Mustang Mach-E)" required @(soloLectura ? "disabled" : "") />
             </div>
 
             <div style="display:flex; justify-content:flex-end; gap:8px;">
                 <button type="button" class="btn btn-secondary" onclick="cerrarModalNodo()">Cancelar</button>
-                <button type="submit" class="btn btn-primary">Crear Nodo</button>
+                @if (!soloLectura)
+                {
+                    <button type="submit" class="btn btn-primary">Crear Nodo</button>
+                }
             </div>
         </form>
     </div>
@@ -198,6 +255,8 @@
 
 @section Scripts {
     <script>
+        const esSoloLectura = @(soloLectura ? "true" : "false");
+
         function toggleTree(id) {
             const children = document.getElementById('children-' + id);
             const toggle = document.getElementById('toggle-' + id);
@@ -231,10 +290,14 @@
                     }
                     cont.innerHTML = '';
                     data.forEach(p => {
+                        const botonDesvincular = !esSoloLectura
+                            ? `<button type="button" onclick="desvincularParte(${p.id}, ${celdaId})" style="border:none; background:none; cursor:pointer; color:var(--accent); font-weight:700; margin-left:4px;" title="Desvincular">&times;</button>`
+                            : '';
+
                         cont.innerHTML += `
                             <div class="ms-tag" style="display:inline-flex; align-items:center; gap:6px; background:var(--accent-light); color:var(--accent); border-radius:6px; padding:6px 10px; font-size:12px; font-weight:600;">
                                 <span>${p.sapPartNumber} — ${p.descripcion}</span>
-                                <button type="button" onclick="desvincularParte(${p.id}, ${celdaId})" style="border:none; background:none; cursor:pointer; color:var(--accent); font-weight:700; margin-left:4px;">&times;</button>
+                                ${botonDesvincular}
                             </div>
                         `;
                     });
@@ -242,7 +305,14 @@
         }
 
         function desvincularParte(parteId, celdaId) {
-            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            if (esSoloLectura) {
+                alert('Modo Solo Lectura: No puedes desvincular partes en plantas foráneas.');
+                return;
+            }
+
+            const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+            const token = tokenInput ? tokenInput.value : '';
+
             fetch(`/Estructura/DesvincularParte`, {
                 method: 'POST',
                 headers: {
@@ -251,11 +321,19 @@
                 },
                 body: `parteId=${parteId}&__RequestVerificationToken=${token}`
             })
-            .then(r => r.json())
+            .then(r => {
+                if (r.status === 403) throw new Error('Modo Solo Lectura: Acción rechazada.');
+                return r.json();
+            })
             .then(res => {
                 if (res.success) {
                     cargarPartesDeCelda(celdaId);
+                } else {
+                    alert(res.message || 'Error al desvincular parte.');
                 }
+            })
+            .catch(err => {
+                alert(err.message || 'Error al procesar.');
             });
         }
 
@@ -265,6 +343,11 @@
         let listaProyectosPlanta   = [];
 
         function abrirModalNodo() {
+            if (esSoloLectura) {
+                alert('Modo Solo Lectura: Acción no permitida en esta planta.');
+                return;
+            }
+
             const selTipo = document.getElementById('tipoNodo');
             selTipo.value = 'proyecto';
 
@@ -343,7 +426,6 @@
             const txtNombre            = document.getElementById('txtNombreNodo');
             const dataList             = document.getElementById('listaWorkCentersBD');
 
-            // Limpieza general previa
             txtCodigo.value = '';
             txtNombre.value = '';
             txtCodigo.readOnly = false;
@@ -421,7 +503,6 @@
             }
         }
 
-        // Enrutador de cambios en padreId
         function alCambiarPadreGeneral(padreId) {
             const tipo = document.getElementById('tipoNodo').value;
             if (tipo === 'linea') {
@@ -511,7 +592,6 @@
                 });
         }
 
-        // Sincronizar nombre dinámico únicamente si es Celda
         document.getElementById('txtCodigoNodo').addEventListener('input', function (e) {
             const tipo = document.getElementById('tipoNodo').value;
             if (tipo === 'celda') {
@@ -521,6 +601,10 @@
         });
 
         function guardarAsignacionMensaje() {
+            if (esSoloLectura) {
+                alert('Modo Solo Lectura: No puedes modificar la estructura de esta planta.');
+                return;
+            }
             alert('Asignación de números de parte guardada correctamente.');
         }
     </script>

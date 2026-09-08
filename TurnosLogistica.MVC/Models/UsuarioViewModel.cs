@@ -7,6 +7,7 @@ public class UsuarioViewModel
     public string NombreCompleto { get; set; } = "";
     public string NoEmpleado { get; set; } = "";
     public string Email { get; set; } = "";
+    public int PlantaId { get; set; } // <-- ID numérico de la planta asignada
     public string PlantaNombre { get; set; } = "";
     public string Rol { get; set; } = "operador"; // sistemas, admin, jefe_log, operador
     public bool Activo { get; set; } = true;
@@ -20,4 +21,12 @@ public class UsuariosViewModel
     public int TotalMostrados => Empleados.Count;
     public string? MensajeExito { get; set; }
     public string? MensajeError { get; set; }
+}
+
+public class LoginViewModel
+{
+    public string CWID { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+    public string? ReturnUrl { get; set; }
+    public string? ErrorMensaje { get; set; }
 }

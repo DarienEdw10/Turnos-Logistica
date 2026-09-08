@@ -1,14 +1,50 @@
 @model List<TurnosLogistica.MVC.Models.TurnoViewModel>
 @{
     ViewData["Title"] = "Gestión de Turnos";
+
+    // =============================================================
+    // EVALUACIÓN DE AISLAMIENTO MULTIPLANTA
+    // =============================================================
+    int plantaAsignadaId = 1;
+    if (int.TryParse(User.FindFirst("PlantaAsignadaId")?.Value, out int pAsig))
+    {
+        plantaAsignadaId = pAsig;
+    }
+
+    int nivelUsuario = 10;
+    if (int.TryParse(User.FindFirst("NivelJerarquico")?.Value, out int nVal))
+    {
+        nivelUsuario = nVal;
+    }
+
+    string rolUsuario = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.ToLower() ?? "operador";
+
+    int plantaActivaId = 1;
+    if (Context.Request.Cookies.TryGetValue("PlantaActivaId", out string? cookieVal) && int.TryParse(cookieVal, out int parsedId))
+    {
+        plantaActivaId = parsedId;
+    }
+
+    bool esPlantaForanea = (plantaActivaId != plantaAsignadaId);
+    bool esPersonalSistemas = (nivelUsuario >= 40 || rolUsuario == "sistemas");
+    bool soloLectura = esPlantaForanea && !esPersonalSistemas;
 }
 
-<div class="page-header">
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
     <div>
-        <div class="page-title">Gestión de Turnos</div>
-        <div class="page-subtitle">Configuración de turnos, paros programados y tiempo neto efectivo</div>
+        <div class="page-title" style="font-size:20px; font-weight:700;">Gestión de Turnos</div>
+        <div class="page-subtitle" style="color:var(--text-muted); font-size:14px;">Configuración de turnos, paros programados y tiempo neto efectivo — Planta @plantaActivaId</div>
     </div>
-    <button class="btn btn-primary btn-sm" onclick="abrirModalTurno(0)">+ Agregar Turno</button>
+    @if (soloLectura)
+    {
+        <button class="btn btn-secondary btn-sm" disabled style="opacity:0.55; cursor:not-allowed;" title="Modo Solo Lectura: Tu planta base es la Planta @plantaAsignadaId. En Planta @plantaActivaId la configuración de turnos está bloqueada.">
+            🔒 + Agregar Turno
+        </button>
+    }
+    else
+    {
+        <button class="btn btn-primary btn-sm" onclick="abrirModalTurno(0)">+ Agregar Turno</button>
+    }
 </div>
 
 <div class="card" style="padding:0">
@@ -24,7 +60,7 @@
                     <th>Paros Ligados</th>
                     <th>Tiempo Neto</th>
                     <th>Estado</th>
-                    <th>Acciones</th>
+                    <th style="text-align:center;">Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -56,8 +92,17 @@
                                     <span class="badge badge-inactivo">Inactivo</span>
                                 }
                             </td>
-                            <td>
-                                <button class="btn btn-secondary btn-sm" onclick="abrirModalTurno(@t.Id)">Editar</button>
+                            <td style="text-align:center;">
+                                @if (soloLectura)
+                                {
+                                    <button class="btn btn-secondary btn-sm" disabled style="padding:4px 10px; font-size:11px; opacity:0.55; cursor:not-allowed;" title="Modo Solo Lectura">
+                                        🔒 Solo Lectura
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-secondary btn-sm" onclick="abrirModalTurno(@t.Id)">Editar</button>
+                                }
                             </td>
                         </tr>
                     }
@@ -76,31 +121,46 @@
 </div>
 
 <!-- MODAL FLOTANTE: AGREGAR / EDITAR TURNO CON PAROS DINÁMICOS -->
-<div id="modalTurnoOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:250; align-items:center; justify-content:center;">
+<div id="modalTurnoOverlay"
+     style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:250; align-items:center; justify-content:center;">
     <div style="background:var(--surface); border-radius:12px; padding:24px; width:100%; max-width:620px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.25);">
-        
+
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
             <h3 id="modalTurnoTitle" style="font-size:16px; font-weight:700; margin:0;">Agregar Turno</h3>
-            <button type="button" onclick="cerrarModalTurno()" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--text-muted);">&times;</button>
+            <button type="button" onclick="cerrarModalTurno()"
+                    style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--text-muted);">&times;</button>
         </div>
+
+        @if (soloLectura)
+        {
+            <div style="background:#fffbeb; border:1px solid #fde68a; color:#92400e; padding:8px 12px; border-radius:6px; font-size:12px; margin-bottom:12px;">
+                🔒 <strong>Modo Solo Lectura:</strong> No tienes permisos para crear o modificar turnos en esta planta.
+            </div>
+        }
 
         <form id="formTurno" asp-controller="Turnos" asp-action="Guardar" method="post" onsubmit="return validarEnvioTurno()">
             @Html.AntiForgeryToken()
             <input type="hidden" id="turnoId" name="id" value="0" />
 
             <div class="form-group" style="margin-bottom:12px;">
-                <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">NOMBRE DEL TURNO *</label>
-                <input type="text" id="turnoNombre" name="nombre" placeholder="Ej. 1er T — Matutino" required />
+                <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">
+                    NOMBRE DEL TURNO *
+                </label>
+                <input type="text" id="turnoNombre" name="nombre" placeholder="Ej. 1er T — Matutino" required @(soloLectura ? "disabled" : "") />
             </div>
 
             <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
                 <div class="form-group">
-                    <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">HORA INICIO *</label>
-                    <input type="time" id="turnoHoraInicio" name="horaInicio" required onchange="recalcularTiempos()" />
+                    <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">
+                        HORA INICIO *
+                    </label>
+                    <input type="time" id="turnoHoraInicio" name="horaInicio" required onchange="recalcularTiempos()" @(soloLectura ? "disabled" : "") />
                 </div>
                 <div class="form-group">
-                    <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">HORA FIN *</label>
-                    <input type="time" id="turnoHoraFin" name="horaFin" required onchange="recalcularTiempos()" />
+                    <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">
+                        HORA FIN *
+                    </label>
+                    <input type="time" id="turnoHoraFin" name="horaFin" required onchange="recalcularTiempos()" @(soloLectura ? "disabled" : "") />
                 </div>
             </div>
 
@@ -124,7 +184,10 @@
             <div style="margin-bottom:16px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <label style="font-size:11px; font-weight:700; color:var(--text-muted); margin:0;">PAROS ASOCIADOS AL TURNO</label>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="agregarFilaParo()">+ Agregar Paro</button>
+                    @if (!soloLectura)
+                    {
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="agregarFilaParo()">+ Agregar Paro</button>
+                    }
                 </div>
 
                 <div class="table-wrap">
@@ -143,21 +206,25 @@
                     </table>
                 </div>
 
-                <div id="alertaExceso" style="display:none; color:var(--danger); font-size:11.5px; font-weight:700; margin-top:8px;">
+                <div id="alertaExceso"
+                     style="display:none; color:var(--danger); font-size:11.5px; font-weight:700; margin-top:8px;">
                     ⚠ El tiempo acumulado de paros excede o anula la duración bruta del turno.
                 </div>
             </div>
 
             <div class="form-group" style="margin-bottom:16px;">
                 <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:600;">
-                    <input type="checkbox" id="turnoActivo" name="activo" value="true" checked />
+                    <input type="checkbox" id="turnoActivo" name="activo" value="true" checked @(soloLectura ? "disabled" : "") />
                     Turno Activo
                 </label>
             </div>
 
             <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px; border-top:1px solid var(--border); padding-top:14px;">
                 <button type="button" class="btn btn-secondary" onclick="cerrarModalTurno()">Cancelar</button>
-                <button type="submit" id="btnGuardarTurno" class="btn btn-primary">Guardar Turno</button>
+                @if (!soloLectura)
+                {
+                    <button type="submit" id="btnGuardarTurno" class="btn btn-primary">Guardar Turno</button>
+                }
             </div>
         </form>
     </div>
@@ -165,6 +232,7 @@
 
 @section Scripts {
     <script>
+        const esSoloLectura = @(soloLectura ? "true" : "false");
         let indexParo = 0;
 
         function cerrarModalTurno() {
@@ -173,6 +241,11 @@
         }
 
         function abrirModalTurno(id) {
+            if (esSoloLectura) {
+                alert('Modo Solo Lectura: No tienes permisos para gestionar turnos en esta planta.');
+                return;
+            }
+
             const overlay = document.getElementById('modalTurnoOverlay');
             const title = document.getElementById('modalTurnoTitle');
             const tbody = document.getElementById('listaParosBody');
@@ -186,15 +259,17 @@
                 document.getElementById('turnoHoraInicio').value = '06:00';
                 document.getElementById('turnoHoraFin').value = '14:00';
                 document.getElementById('turnoActivo').checked = true;
-                
-                // Paro por defecto (ej. Comedor 30 min)
+
                 agregarFilaParo('Comedor / Alimentos', 30, true);
                 overlay.style.display = 'flex';
                 recalcularTiempos();
             } else {
                 title.innerText = 'Editar Turno';
                 fetch(`/Turnos/ObtenerTurno?id=${id}`)
-                    .then(r => r.json())
+                    .then(r => {
+                        if (r.status === 403) throw new Error('Acceso denegado.');
+                        return r.json();
+                    })
                     .then(data => {
                         document.getElementById('turnoId').value = data.id;
                         document.getElementById('turnoNombre').value = data.nombre;
@@ -209,6 +284,9 @@
                         }
                         overlay.style.display = 'flex';
                         recalcularTiempos();
+                    })
+                    .catch(err => {
+                        alert(err.message || 'Error al obtener la información del turno.');
                     });
             }
         }
@@ -217,22 +295,26 @@
             const tbody = document.getElementById('listaParosBody');
             const tr = document.createElement('tr');
             tr.className = 'fila-paro';
+
+            const disabledAttr = esSoloLectura ? 'disabled' : '';
+
             tr.innerHTML = `
                 <td>
+                    <input type="hidden" name="Paros.Index" value="${indexParo}" />
                     <input type="hidden" name="Paros[${indexParo}].Id" value="${paroId}" />
-                    <input type="text" name="Paros[${indexParo}].TipoParo" class="form-control form-control-sm paro-motivo" placeholder="Ej. Comedor / Junta" value="${motivo}" required style="padding:4px 8px; font-size:12px;" />
+                    <input type="text" name="Paros[${indexParo}].TipoParo" class="form-control form-control-sm paro-motivo" placeholder="Ej. Comedor / Junta" value="${motivo}" required ${disabledAttr} style="padding:4px 8px; font-size:12px;" />
                 </td>
                 <td>
-                    <input type="number" name="Paros[${indexParo}].DuracionMinutos" class="form-control form-control-sm paro-minutos" min="1" value="${minutos}" oninput="recalcularTiempos()" required style="padding:4px 8px; font-size:12px;" />
+                    <input type="number" name="Paros[${indexParo}].DuracionMinutos" class="form-control form-control-sm paro-minutos" min="1" value="${minutos}" oninput="recalcularTiempos()" required ${disabledAttr} style="padding:4px 8px; font-size:12px;" />
                 </td>
                 <td>
-                    <select name="Paros[${indexParo}].EsProgramado" class="form-select form-select-sm" style="padding:4px 8px; font-size:12px;">
+                    <select name="Paros[${indexParo}].EsProgramado" class="form-select form-select-sm" ${disabledAttr} style="padding:4px 8px; font-size:12px;">
                         <option value="true" ${esProgramado ? 'selected' : ''}>Programado</option>
                         <option value="false" ${!esProgramado ? 'selected' : ''}>No Programado</option>
                     </select>
                 </td>
                 <td style="text-align:center;">
-                    <button type="button" class="btn btn-danger btn-sm" style="padding:2px 6px; font-size:11px;" onclick="eliminarFilaParo(this)">✕</button>
+                    ${!esSoloLectura ? '<button type="button" class="btn btn-danger btn-sm" style="padding:2px 6px; font-size:11px;" onclick="eliminarFilaParo(this)">✕</button>' : ''}
                 </td>
             `;
             tbody.appendChild(tr);
@@ -241,6 +323,7 @@
         }
 
         function eliminarFilaParo(btn) {
+            if (esSoloLectura) return;
             btn.closest('tr').remove();
             recalcularTiempos();
         }
@@ -257,7 +340,7 @@
             let tFinMin = h2 * 60 + m2;
 
             if (tFinMin <= tInicioMin) {
-                tFinMin += 24 * 60; // Cruce de medianoche
+                tFinMin += 24 * 60;
             }
 
             return tFinMin - tInicioMin;
@@ -282,19 +365,24 @@
             document.getElementById('lblTotalParos').innerText = `${totalParoMinutos} min (${(totalParoMinutos / 60).toFixed(2)} h)`;
 
             if (tiempoNetoMinutos <= 0 && duracionBrutaMin > 0) {
-                alerta.style.display = 'block';
-                btnGuardar.disabled = true;
+                if (alerta) alerta.style.display = 'block';
+                if (btnGuardar && !esSoloLectura) btnGuardar.disabled = true;
                 document.getElementById('lblTiempoNeto').style.color = 'var(--danger)';
                 document.getElementById('lblTiempoNeto').innerText = '0.00 h (Inválido)';
             } else {
-                alerta.style.display = 'none';
-                btnGuardar.disabled = false;
+                if (alerta) alerta.style.display = 'none';
+                if (btnGuardar && !esSoloLectura) btnGuardar.disabled = false;
                 document.getElementById('lblTiempoNeto').style.color = 'var(--success)';
                 document.getElementById('lblTiempoNeto').innerText = `${(tiempoNetoMinutos / 60).toFixed(2)} h`;
             }
         }
 
         function validarEnvioTurno() {
+            if (esSoloLectura) {
+                alert('Modo Solo Lectura: Acción rechazada.');
+                return false;
+            }
+
             const duracionBrutaMin = obtenerMinutosBrutosTurno();
             let totalParoMinutos = 0;
             document.querySelectorAll('.paro-minutos').forEach(input => {

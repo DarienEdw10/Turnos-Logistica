@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TurnosLogistica.Domain.Data;
 using TurnosLogistica.Domain.Models;
+using TurnosLogistica.MVC.Filters;
 using TurnosLogistica.MVC.Models;
 
 namespace TurnosLogistica.MVC.Controllers;
@@ -18,7 +19,14 @@ public class PartesController : Controller
     [HttpGet]
     public async Task<IActionResult> Index()
     {
+        // 1. Control de acceso: solo jefe_log, admin y sistemas (Nivel >= 20)
+        if (!TienePermisoCatalogo())
+        {
+            return Forbid();
+        }
+
         int plantaId = ObtenerPlantaActivaId();
+        ViewBag.PlantaActivaId = plantaId;
 
         var query = from parte in _context.NumerosDeParte
                     join linea in _context.Lineas on parte.LineaId equals linea.Id into lJ
@@ -89,13 +97,14 @@ public class PartesController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [ServiceFilter(typeof(ValidarOperacionPlantaAttribute))] // <-- Candado Multi-Planta y Auditoría de Sistemas
     public async Task<IActionResult> Guardar(NumeroDeParte model)
     {
         int plantaId = ObtenerPlantaActivaId();
 
         if (model.Id == 0)
         {
-            // Alta de nueva parte
+            // Alta de nueva parte en la planta activa
             model.PlantaId = plantaId;
             model.Activo = true;
             model.CreadoAt = DateTime.UtcNow;
@@ -103,8 +112,8 @@ public class PartesController : Controller
         }
         else
         {
-            // Edición de parte existente
-            var dbParte = await _context.NumerosDeParte.FindAsync(model.Id);
+            // Edición de parte existente asegurando coincidencia de planta
+            var dbParte = await _context.NumerosDeParte.FirstOrDefaultAsync(p => p.Id == model.Id && p.PlantaId == plantaId);
             if (dbParte == null) return NotFound();
 
             dbParte.SapPartNumber = model.SapPartNumber;
@@ -123,6 +132,19 @@ public class PartesController : Controller
 
         await _context.SaveChangesAsync();
         return RedirectToAction(nameof(Index));
+    }
+
+    private bool TienePermisoCatalogo()
+    {
+        string? nivelStr = User.FindFirst("NivelJerarquico")?.Value;
+        string rol = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.ToLower() ?? string.Empty;
+
+        if (int.TryParse(nivelStr, out int nivel) && nivel >= 20)
+        {
+            return true;
+        }
+
+        return rol == "jefe_log" || rol == "admin" || rol == "sistemas";
     }
 
     private int ObtenerPlantaActivaId()

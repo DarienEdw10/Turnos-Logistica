@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TurnosLogistica.Domain.Data;
 using TurnosLogistica.Domain.Models;
+using TurnosLogistica.MVC.Filters;
 using TurnosLogistica.MVC.Services;
 using Logger = Magna.Cosma.Autotek.Log.Logger;
 
@@ -25,9 +26,8 @@ public class UsuariosController : Controller
         _logger = logger;
     }
 
-    private async Task<(int Nivel, string Rol, string CWID)> ObtenerUsuarioActualAsync()
+    private async Task<(int Nivel, string Rol, string CWID, int PlantaAsignadaId)> ObtenerUsuarioActualAsync()
     {
-        // 1. Priorizar la cookie del simulador si existe
         string cwid = "";
         if (Request.Cookies.TryGetValue("Simulador_CWID", out string? cwidCookie) && !string.IsNullOrWhiteSpace(cwidCookie))
         {
@@ -39,31 +39,37 @@ public class UsuariosController : Controller
             if (cwid.Contains('\\')) cwid = cwid.Split('\\')[1].Trim();
         }
 
-        // 2. Buscar por Nómina / NoEmpleado o CWID oficial
         var u = await _context.Usuarios
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.NoEmpleado == cwid || x.CWID == cwid || x.Email.StartsWith(cwid));
 
-        // 3. Obtener el nivel real registrado en la BD (fallback a 10 si no existe)
         int nivel = u?.Nivel ?? 10;
         string rol = u?.Rol ?? (nivel >= 40 ? "sistemas" : (nivel >= 30 ? "admin" : (nivel >= 20 ? "jefe_log" : "operador")));
+        int plantaAsignada = u?.PlantaId ?? 1;
 
-        return (nivel, rol, cwid);
+        return (nivel, rol, cwid, plantaAsignada);
     }
 
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-        var (nivel, rol, _) = await ObtenerUsuarioActualAsync();
+        var (nivel, rol, _, plantaAsignada) = await ObtenerUsuarioActualAsync();
 
-        // Solo Administradores (30+) y Sistemas (40) tienen acceso a gestionar usuarios
+        // Solo Administradores (30+) y Sistemas (40) acceden a gestión de usuarios
         if (nivel < 30)
         {
             return Forbid();
         }
 
+        int plantaActiva = ObtenerPlantaActivaId();
+        ViewBag.PlantaActivaId = plantaActiva;
+        ViewBag.PlantaAsignadaId = plantaAsignada;
         ViewBag.NivelUsuarioActual = nivel;
         ViewBag.EsSistemas = (rol == "sistemas" || nivel >= 40);
+
+        // Modo Solo Lectura si es Admin consultando otra planta
+        bool esPlantaForanea = (plantaActiva != plantaAsignada);
+        ViewBag.SoloLectura = esPlantaForanea && (nivel < 40 && rol != "sistemas");
 
         return View();
     }
@@ -71,7 +77,7 @@ public class UsuariosController : Controller
     [HttpGet]
     public async Task<IActionResult> BuscarColaboradoresCorporativos(string? query)
     {
-        var (nivel, _, _) = await ObtenerUsuarioActualAsync();
+        var (nivel, _, _, _) = await ObtenerUsuarioActualAsync();
         if (nivel < 30) return Forbid();
 
         try
@@ -155,9 +161,10 @@ public class UsuariosController : Controller
     }
 
     [HttpPost]
+    [ServiceFilter(typeof(ValidarOperacionPlantaAttribute))] // <-- Candado Multi-Planta y Registro de Auditoría
     public async Task<IActionResult> AsignarNivel([FromBody] AsignarNivelDto dto)
     {
-        var (nivelEjecutor, rolEjecutor, usuarioActual) = await ObtenerUsuarioActualAsync();
+        var (nivelEjecutor, rolEjecutor, usuarioActual, plantaAsignadaEjecutor) = await ObtenerUsuarioActualAsync();
 
         if (nivelEjecutor < 30)
         {
@@ -169,10 +176,7 @@ public class UsuariosController : Controller
             return BadRequest(new { success = false, message = "Datos inválidos para asignación de nivel." });
         }
 
-        // =========================================================================
-        // REGLA: El Administrador (30) solo asigna niveles menores al suyo (< 30)
-        //        Solo Sistemas (40) puede asignar Nivel 30 (Admin) o Nivel 40 (Sistemas)
-        // =========================================================================
+        // 1. REGLA JERÁRQUICA: Admin (30) solo puede asignar niveles menores al suyo (< 30)
         if (nivelEjecutor < 40 && dto.Nivel >= nivelEjecutor)
         {
             return BadRequest(new
@@ -183,7 +187,18 @@ public class UsuariosController : Controller
         }
 
         string cwidLimpio = dto.Cwid.Contains('\\') ? dto.Cwid.Split('\\')[1].Trim() : dto.Cwid.Trim();
-        int plantaId = ObtenerPlantaActivaId();
+        int plantaActiva = ObtenerPlantaActivaId();
+
+        // 2. REGLA TERRITORIAL: Si no es Sistemas, solo puede operar sobre usuarios de su misma planta
+        int plantaDestino = (dto.PlantaId > 0) ? dto.PlantaId : plantaActiva;
+        if (nivelEjecutor < 40 && plantaDestino != plantaAsignadaEjecutor)
+        {
+            return StatusCode(403, new
+            {
+                success = false,
+                message = $"Modo Solo Lectura: Perteneces a la Planta {plantaAsignadaEjecutor}. No puedes gestionar usuarios de la Planta {plantaDestino}."
+            });
+        }
 
         string rol = dto.Nivel switch
         {
@@ -200,23 +215,30 @@ public class UsuariosController : Controller
 
             if (usuario != null)
             {
-                // Si el usuario a editar ya tiene un nivel igual o mayor al ejecutor, bloquear si no es Sistemas
+                // Un admin no puede modificar a otro admin ni a sistemas
                 if (nivelEjecutor < 40 && usuario.Nivel >= nivelEjecutor)
                 {
                     return BadRequest(new { success = false, message = "No tiene permisos para modificar a un usuario de nivel igual o superior al suyo." });
+                }
+
+                // Un admin no puede modificar a usuarios asignados a otra planta
+                if (nivelEjecutor < 40 && usuario.PlantaId != plantaAsignadaEjecutor)
+                {
+                    return StatusCode(403, new { success = false, message = "No puedes alterar credenciales de un usuario asignado a otra planta." });
                 }
 
                 usuario.CWID = cwidLimpio;
                 usuario.Nivel = dto.Nivel;
                 usuario.Rol = rol;
                 usuario.Activo = true;
+                if (dto.PlantaId > 0) usuario.PlantaId = dto.PlantaId;
                 if (!string.IsNullOrWhiteSpace(dto.Nombre)) usuario.Nombre = dto.Nombre;
             }
             else
             {
                 usuario = new Usuario
                 {
-                    PlantaId = plantaId,
+                    PlantaId = plantaDestino,
                     CWID = cwidLimpio,
                     NoEmpleado = string.IsNullOrWhiteSpace(dto.NoEmpleado) ? cwidLimpio : dto.NoEmpleado,
                     Nombre = string.IsNullOrWhiteSpace(dto.Nombre) ? cwidLimpio : dto.Nombre,
@@ -235,9 +257,9 @@ public class UsuariosController : Controller
                 nivel: Logger.NivelesLog.Detallado,
                 tipo: Logger.TiposLog.Informativo,
                 origen: "UsuariosController.AsignarNivel",
-                texto: $"El usuario [{usuarioActual}] ({rolEjecutor}) asignó Nivel [{dto.Nivel}] al colaborador [{dto.Nombre}] (CWID: [{dto.Cwid}]).");
+                texto: $"El usuario [{usuarioActual}] ({rolEjecutor}) asignó Nivel [{dto.Nivel}] al colaborador [{dto.Nombre}] (CWID: [{dto.Cwid}]) en Planta [{usuario.PlantaId}].");
 
-            return Json(new { success = true, message = $"Permisos actualizados para {dto.Nombre} (Rol: {rol.ToUpper()})." });
+            return Json(new { success = true, message = $"Permisos actualizados para {dto.Nombre} (Rol: {rol.ToUpper()}) en Planta {usuario.PlantaId}." });
         }
         catch (Exception ex)
         {
@@ -254,11 +276,13 @@ public class UsuariosController : Controller
         }
         return 1;
     }
+
     public class AsignarNivelDto
     {
         public string Cwid { get; set; } = string.Empty;
         public string NoEmpleado { get; set; } = string.Empty;
         public string Nombre { get; set; } = string.Empty;
         public int Nivel { get; set; }
+        public int PlantaId { get; set; }
     }
 }

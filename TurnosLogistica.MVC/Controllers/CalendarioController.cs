@@ -32,6 +32,7 @@ public class CalendarioController : Controller
         int m = mes ?? DateTime.Today.Month;
         int a = anio ?? DateTime.Today.Year;
 
+        // PlanificacionService ya calcula Estado y EstadoCss comparando con DateTime.Now
         var vm = await _service.ObtenerCalendarioAsync(pId, agrupacion, granularidad, m, a, linea, celda, turno);
         return View(vm);
     }
@@ -62,60 +63,57 @@ public class CalendarioController : Controller
         return Json(paros);
     }
 
-   [HttpPost]
-public async Task<IActionResult> GuardarParosProgramacion([FromBody] GuardarParosDto dto)
-{
-    if (dto == null || dto.ProgramacionId <= 0)
-        return Json(new { success = false, message = "Datos inválidos." });
-
-    // 1. Obtener la programación para extraer su turno_id original
-    var prog = await _context.Programaciones
-        .AsNoTracking()
-        .FirstOrDefaultAsync(p => p.Id == dto.ProgramacionId);
-
-    int? turnoIdAsociado = prog?.TurnoId;
-
-    // 2. Limpiar paros previos de esta programación específica
-    var parosActuales = await _context.TurnoParos
-        .Where(p => p.ProgramacionId == dto.ProgramacionId)
-        .ToListAsync();
-
-    _context.TurnoParos.RemoveRange(parosActuales);
-
-    // 3. Insertar los nuevos paros con turno_id y descripción
-    if (dto.Paros != null && dto.Paros.Any())
+    [HttpPost]
+    public async Task<IActionResult> GuardarParosProgramacion([FromBody] GuardarParosDto dto)
     {
-        foreach (var p in dto.Paros)
+        if (dto == null || dto.ProgramacionId <= 0)
+            return Json(new { success = false, message = "Datos inválidos." });
+
+        var prog = await _context.Programaciones
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == dto.ProgramacionId);
+
+        int? turnoIdAsociado = prog?.TurnoId;
+
+        var parosActuales = await _context.TurnoParos
+            .Where(p => p.ProgramacionId == dto.ProgramacionId)
+            .ToListAsync();
+
+        _context.TurnoParos.RemoveRange(parosActuales);
+
+        if (dto.Paros != null && dto.Paros.Any())
         {
-            _context.TurnoParos.Add(new TurnoParo
+            foreach (var p in dto.Paros)
             {
-                ProgramacionId = dto.ProgramacionId,
-                TurnoId = turnoIdAsociado, // <-- Asigna el turno_id automáticamente
-                TipoParo = p.TipoParo,
-                DuracionMinutos = p.DuracionMinutos,
-                EsProgramado = p.EsProgramado,
-                Descripcion = string.IsNullOrWhiteSpace(p.Descripcion) ? p.TipoParo : p.Descripcion, // <-- Guarda la descripción
-                Activo = true
-            });
+                _context.TurnoParos.Add(new TurnoParo
+                {
+                    ProgramacionId = dto.ProgramacionId,
+                    TurnoId = turnoIdAsociado,
+                    TipoParo = p.TipoParo,
+                    DuracionMinutos = p.DuracionMinutos,
+                    EsProgramado = p.EsProgramado,
+                    Descripcion = string.IsNullOrWhiteSpace(p.Descripcion) ? p.TipoParo : p.Descripcion,
+                    Activo = true
+                });
+            }
         }
+
+        await _context.SaveChangesAsync();
+        return Json(new { success = true });
     }
 
-    await _context.SaveChangesAsync();
-    return Json(new { success = true });
-}
-}
+    public class GuardarParosDto
+    {
+        public long ProgramacionId { get; set; }
+        public List<ParoItemDto> Paros { get; set; } = new();
+    }
 
-public class GuardarParosDto
-{
-    public long ProgramacionId { get; set; }
-    public List<ParoItemDto> Paros { get; set; } = new();
-}
-
-public class ParoItemDto
-{
-    public int Id { get; set; }
-    public string TipoParo { get; set; } = string.Empty;
-    public string? Descripcion { get; set; }
-    public int DuracionMinutos { get; set; }
-    public bool EsProgramado { get; set; }
+    public class ParoItemDto
+    {
+        public int Id { get; set; }
+        public string TipoParo { get; set; } = string.Empty;
+        public string? Descripcion { get; set; }
+        public int DuracionMinutos { get; set; }
+        public bool EsProgramado { get; set; }
+    }
 }

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TurnosLogistica.Domain")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1926fe78b2ae11c49db63d063eafd8d9540a83ca")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f6c9f00b1ddef7a7aafc72e047faa288d2fee470")]
 [assembly: System.Reflection.AssemblyProductAttribute("TurnosLogistica.Domain")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TurnosLogistica.Domain")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

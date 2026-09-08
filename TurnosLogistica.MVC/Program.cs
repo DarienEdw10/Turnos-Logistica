@@ -4,8 +4,11 @@ using Magna.Cosma.Autotek.Autentificacion.Library;
 using Magna.Cosma.Autotek.Log;
 using TurnosLogistica.Domain.Data;
 using TurnosLogistica.Domain.Repositories;
+using TurnosLogistica.MVC.Filters;
+using TurnosLogistica.MVC.Middlewares;
 using TurnosLogistica.MVC.Services;
 using Logger = Magna.Cosma.Autotek.Log.Logger;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,13 +34,13 @@ Logger logger = new(logSettings);
 builder.Services.AddSingleton(logger);
 
 // =============================================================
-//  REPOSITORIOS Y ACCESO A DATOS
+// 2. REPOSITORIOS Y ACCESO A DATOS
 // =============================================================
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IAuditoriaRepository, AuditoriaRepository>();
 
 // =============================================================
-// 2. CONFIGURACIÓN DE AUTENTICACIÓN Y REPOSITORIO DE EMPLEADOS
+// 3. CONFIGURACIÓN DE AUTENTICACIÓN CORPORATIVA (Magna Autotek)
 // =============================================================
 SettingsAutentificacion settingsAutentificacion = new();
 builder.Configuration.GetSection("SettingsAutentificacion").Bind(settingsAutentificacion);
@@ -47,7 +50,7 @@ builder.Services.AddSingleton<RepositorioEmpleados>(sp =>
     new RepositorioEmpleados(settingsAutentificacion, logger));
 
 // =============================================================
-// 3. INYECCIÓN DE DEPENDENCIAS MVC Y BASE DE DATOS
+// 4. INYECCIÓN DE DEPENDENCIAS MVC, SERVICIOS Y FILTROS
 // =============================================================
 builder.Services.AddControllersWithViews();
 
@@ -63,15 +66,23 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     });
 });
 
-builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IPlanificacionService, PlanificacionService>();
 builder.Services.AddScoped<UsuarioAuthService>();
+builder.Services.AddScoped<ValidarOperacionPlantaAttribute>(); // <-- Filtro de protección multiplanta
 builder.Services.AddHttpContextAccessor();
 
-// Autenticación integrada de Windows
-builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme)
+// Autenticación integrada de Windows Corporativa
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = NegotiateDefaults.AuthenticationScheme;
+    })
+    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+    {
+        options.ExpireTimeSpan = TimeSpan.FromHours(12);
+        options.SlidingExpiration = true;
+    })
     .AddNegotiate();
-
 builder.Services.AddAuthorization(options =>
 {
     options.FallbackPolicy = options.DefaultPolicy;
@@ -80,7 +91,7 @@ builder.Services.AddAuthorization(options =>
 var app = builder.Build();
 
 // =============================================================
-// 4. PIPELINE HTTP
+// 5. PIPELINE HTTP
 // =============================================================
 if (!app.Environment.IsDevelopment())
 {
@@ -93,11 +104,17 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+// Autentica el token de Windows
 app.UseAuthentication();
+
+// Middleware silencioso: extrae CWID, resuelve Planta Asignada y Nivel
+app.UseMiddleware<IdentificacionUsuarioMiddleware>();
+
+// Autoriza según los claims resueltos
 app.UseAuthorization();
 
 // =============================================================
-// 5. AUDITORÍA DE INICIO DE SESIÓN Y ACCESOS WEB
+// 6. AUDITORÍA DE INICIO DE SESIÓN Y ACCESOS WEB
 // =============================================================
 app.Use(async (context, next) =>
 {
@@ -107,7 +124,7 @@ app.Use(async (context, next) =>
 
     if (esRutaVista && !esLlamadaEstatica && context.User?.Identity?.IsAuthenticated == true)
     {
-        string cwid = context.User.Identity.Name ?? "Desconocido";
+        string cwid = context.User.FindFirst("CWID")?.Value ?? context.User.Identity.Name ?? "Desconocido";
         var log = context.RequestServices.GetService<Logger>();
 
         log?.Registrar(
@@ -125,7 +142,7 @@ app.MapControllerRoute(
     pattern: "{controller=Calendario}/{action=Index}/{id?}");
 
 // =============================================================
-// 6. PRECARGA ASÍNCRONA DEL PADRÓN AL ARRANCAR LA APLICACIÓN
+// 7. PRECARGA ASÍNCRONA DEL PADRÓN AL ARRANCAR LA APLICACIÓN
 // =============================================================
 using (var scope = app.Services.CreateScope())
 {

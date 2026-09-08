@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TurnosLogistica.Domain.Data;
 using TurnosLogistica.Domain.Models;
+using TurnosLogistica.MVC.Filters;
 using TurnosLogistica.MVC.Models;
 
 namespace TurnosLogistica.MVC.Controllers;
@@ -18,12 +19,19 @@ public class EstructuraController : Controller
     [HttpGet]
     public async Task<IActionResult> Index()
     {
+        // 1. Candado de rol: solo jefe_log, admin y sistemas (Nivel >= 20)
+        if (!TienePermisoCatalogo())
+        {
+            return Forbid();
+        }
+
         int plantaId = ObtenerPlantaActivaId();
+        ViewBag.PlantaActivaId = plantaId;
 
         var planta = await _context.Plantas.FindAsync(plantaId);
         string plantaNombre = planta != null ? $"{planta.Nombre} — {planta.Codigo}" : "Planta";
 
-        // 1. Cargar datos reales de la planta activa
+        // Cargar datos reales de la planta activa
         var proyectosDb = await _context.Proyectos
             .Where(p => p.PlantaId == plantaId && p.Activo)
             .OrderBy(p => p.Codigo)
@@ -42,14 +50,13 @@ public class EstructuraController : Controller
 
         var celdaIds = celdasDb.Select(c => c.Id).ToList();
 
-        // Cargar únicamente las estaciones reales registradas en SQL Server
         var estacionesDb = await _context.Estaciones
             .AsNoTracking()
             .Where(e => celdaIds.Contains(e.CeldaId) && e.Activa)
             .OrderBy(e => e.Codigo)
             .ToListAsync();
 
-        // 2. Jerarquía fiel a la base de datos
+        // Jerarquía para el árbol de la vista
         var proyectosDto = proyectosDb.Select(p => new ProyectoNodoDto
         {
             Id = p.Id,
@@ -65,7 +72,6 @@ public class EstructuraController : Controller
                     Id = c.Id,
                     Codigo = c.Codigo,
                     Nombre = c.Nombre,
-                    // CORREGIDO: Cargar solo estaciones reales de BD
                     Estaciones = estacionesDb
                         .Where(e => e.CeldaId == c.Id)
                         .Select(e => $"{e.Codigo} — {e.Nombre}")
@@ -85,6 +91,7 @@ public class EstructuraController : Controller
         ViewBag.ProyectosJson = proyectosDb.Select(p => new { id = p.Id, texto = p.Codigo + " — " + p.Nombre }).ToList();
         ViewBag.LineasJson = lineasDb.Select(l => new { id = l.Id, texto = (l.Nombre ?? l.Codigo) + " (Línea)" }).ToList();
         ViewBag.CeldasJson = celdasDb.Select(c => new { id = c.Id, texto = c.Codigo + " — " + c.Nombre }).ToList();
+
         var vm = new EstructuraViewModel
         {
             PlantaId = plantaId,
@@ -114,6 +121,7 @@ public class EstructuraController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [ServiceFilter(typeof(ValidarOperacionPlantaAttribute))] // <-- Candado Multi-Planta
     public async Task<IActionResult> DesvincularParte(int parteId)
     {
         var parte = await _context.NumerosDeParte.FindAsync(parteId);
@@ -128,6 +136,7 @@ public class EstructuraController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [ServiceFilter(typeof(ValidarOperacionPlantaAttribute))] // <-- Candado Multi-Planta
     public async Task<IActionResult> AgregarNodo(string tipoNodo, int padreId, string nombre, string codigo)
     {
         int plantaId = ObtenerPlantaActivaId();
@@ -243,6 +252,19 @@ public class EstructuraController : Controller
             .ToListAsync();
 
         return Json(lineas);
+    }
+
+    private bool TienePermisoCatalogo()
+    {
+        string? nivelStr = User.FindFirst("NivelJerarquico")?.Value;
+        string rol = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.ToLower() ?? string.Empty;
+
+        if (int.TryParse(nivelStr, out int nivel) && nivel >= 20)
+        {
+            return true;
+        }
+
+        return rol == "jefe_log" || rol == "admin" || rol == "sistemas";
     }
 
     private int ObtenerPlantaActivaId()

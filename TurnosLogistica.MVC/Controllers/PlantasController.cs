@@ -20,6 +20,7 @@ public class PlantasController : Controller
         ViewBag.PlantaActivaId = plantaActivaId;
 
         var plantas = await _context.Plantas
+            .Where(p => p.Activa)
             .OrderBy(p => p.Id)
             .ToListAsync();
 
@@ -30,27 +31,31 @@ public class PlantasController : Controller
     [ValidateAntiForgeryToken]
     public IActionResult SeleccionarPlanta(int plantaId, string? returnUrl = null)
     {
-        // Guardar la cookie con Path = "/" para que tenga alcance global en todo el dominio
-        Response.Cookies.Append("PlantaActivaId", plantaId.ToString(), new CookieOptions
-        {
-            Expires = DateTimeOffset.UtcNow.AddDays(30),
-            Path = "/",
-            IsEssential = true,
-            HttpOnly = false,
-            SameSite = SameSiteMode.Lax
-        });
+        EstablecerCookiePlanta(plantaId);
 
         if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
         {
             return Redirect(returnUrl);
         }
 
-        return RedirectToAction("Index", "Calendario");
+        return RedirectToAction("Index", "Calendario", new { plantaId });
     }
 
-    // Endpoint rápido para cambios desde el selector del Header (AJAX o Fetch)
+    // Endpoint rápido para cambios desde el selector del Header (soporta JSON { plantaId: X })
     [HttpPost]
-    public IActionResult CambiarPlantaAjax([FromBody] int plantaId)
+    public IActionResult CambiarPlantaAjax([FromBody] CambiarPlantaDto? dto)
+    {
+        if (dto == null || dto.PlantaId <= 0)
+        {
+            return BadRequest(new { success = false, message = "Identificador de planta inválido." });
+        }
+
+        EstablecerCookiePlanta(dto.PlantaId);
+
+        return Ok(new { success = true, plantaId = dto.PlantaId });
+    }
+
+    private void EstablecerCookiePlanta(int plantaId)
     {
         Response.Cookies.Append("PlantaActivaId", plantaId.ToString(), new CookieOptions
         {
@@ -60,8 +65,6 @@ public class PlantasController : Controller
             HttpOnly = false,
             SameSite = SameSiteMode.Lax
         });
-
-        return Ok(new { success = true, plantaId });
     }
 
     private int ObtenerPlantaActivaId()
@@ -71,5 +74,10 @@ public class PlantasController : Controller
             return idVal;
         }
         return 1;
+    }
+
+    public class CambiarPlantaDto
+    {
+        public int PlantaId { get; set; }
     }
 }

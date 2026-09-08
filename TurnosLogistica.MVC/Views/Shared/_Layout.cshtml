@@ -1,7 +1,34 @@
 ﻿@inject TurnosLogistica.Domain.Data.AppDbContext DbContext
 @{
-    // 1. Obtener planta activa desde QueryString, ViewBag o Cookies (por defecto 1)
-    int plantaActivaId = 1;
+    // =============================================================
+    // 1. USUARIO ACTIVO (SIMULADO O AUTENTICADO POR SSO)
+    // =============================================================
+    string cwidActivo = "32352"; // Por defecto: Darien Jimenez (Sistemas)
+    if (Context.Request.Cookies.TryGetValue("Simulador_CWID", out string? cookieCwid) && !string.IsNullOrWhiteSpace(cookieCwid))
+    {
+        cwidActivo = cookieCwid.Trim();
+    }
+    else if (!string.IsNullOrWhiteSpace(User.FindFirst("CWID")?.Value))
+    {
+        cwidActivo = User.FindFirst("CWID")!.Value;
+    }
+
+    // Consultar usuario en BD por Nómina o CWID oficial
+    var usuarioDb = DbContext.Usuarios.FirstOrDefault(u =>
+        u.NoEmpleado == cwidActivo ||
+        u.CWID == cwidActivo ||
+        u.Email.StartsWith(cwidActivo));
+
+    string nombreMostrar = usuarioDb?.Nombre ?? "Darien Edwin Jimenez Gonzaga";
+    string cwidMostrar = usuarioDb?.NoEmpleado ?? usuarioDb?.CWID ?? cwidActivo;
+    string rolBadge = (usuarioDb?.Rol ?? "sistemas").ToUpper();
+    int nivelJerarquico = usuarioDb?.Nivel ?? 40;
+    int plantaAsignadaId = usuarioDb?.PlantaId ?? 1; // <-- PLANTA ASIGNADA NATIVA EN NÓMINA
+
+    // =============================================================
+    // 2. PLANTA ACTIVA EN VISUALIZADOR
+    // =============================================================
+    int plantaActivaId = plantaAsignadaId;
 
     if (Context.Request.Query.TryGetValue("plantaId", out var qVal) && int.TryParse(qVal, out int qParsed))
     {
@@ -16,25 +43,9 @@
         plantaActivaId = idParsed;
     }
 
-    // =============================================================
-    // USUARIO SIMULADO / CWID ACTIVO DESDE COOKIE O BD
-    // =============================================================
-    string cwidActivo = "32352"; // Por defecto: Darien Jimenez
-    if (Context.Request.Cookies.TryGetValue("Simulador_CWID", out string? cookieCwid) && !string.IsNullOrWhiteSpace(cookieCwid))
-    {
-        cwidActivo = cookieCwid.Trim();
-    }
-
-    // Consultar usuario en BD por Nómina o CWID oficial
-    var usuarioDb = DbContext.Usuarios.FirstOrDefault(u =>
-        u.NoEmpleado == cwidActivo ||
-        u.CWID == cwidActivo ||
-        u.Email.StartsWith(cwidActivo));
-
-    string nombreMostrar = usuarioDb?.Nombre ?? "Darien Edwin Jimenez Gonzaga";
-    string cwidMostrar = usuarioDb?.NoEmpleado ?? usuarioDb?.CWID ?? cwidActivo;
-    string rolBadge = (usuarioDb?.Rol ?? "sistemas").ToUpper();
-    int nivelJerarquico = usuarioDb?.Nivel ?? 40;
+    // Bandera de aislamiento multi-planta
+    bool esPlantaForanea = (plantaActivaId != plantaAsignadaId);
+    bool esPersonalSistemas = (nivelJerarquico >= 40 || rolBadge == "SISTEMAS");
 
     // Iniciales dinámicas
     string iniciales = "DJ";
@@ -48,6 +59,8 @@
 
     // Consultar plantas activas directamente de la BD
     var plantasDisponibles = DbContext.Plantas.Where(p => p.Activa).OrderBy(p => p.Id).ToList();
+    var plantaActivaNombre = plantasDisponibles.FirstOrDefault(p => p.Id == plantaActivaId)?.Nombre ?? $"Planta {plantaActivaId}";
+    var plantaAsignadaNombre = plantasDisponibles.FirstOrDefault(p => p.Id == plantaAsignadaId)?.Nombre ?? $"Planta {plantaAsignadaId}";
 }
 <!DOCTYPE html>
 <html lang="es">
@@ -149,6 +162,17 @@
                 margin-right: 10px;
                 gap: 6px;
             }
+
+            .banner-multiplanta {
+                margin: 12px 20px 0 20px;
+                padding: 10px 16px;
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                font-size: 12.5px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            }
         </style>
 
         <div style="display:flex; align-items:center; gap:12px; margin-left:auto;">
@@ -180,11 +204,12 @@
                     🪪 CWID:
                 </span>
                 <select id="selSimuladorCwid" class="plant-select-custom" style="font-size: 11.5px; font-weight: 700; color: #1e293b;" onchange="cambiarCwidSimulador(this.value)">
-                    <!option value="32352" @(cwidActivo == "32352" ? "selected" : "")>32352 — Darien Jimenez (sistemas)</!option>
-                    <!option value="31102" @(cwidActivo == "31102" ? "selected" : "")>31102 — Allan Castro (sistemas)</!option>
-                    <!option value="6926" @(cwidActivo == "6926" ? "selected" : "")>6926 — David Galvan (admin)</!option>
-                    <!option value="1568" @(cwidActivo == "1568" ? "selected" : "")>1568 — Jose Sanchez (jefe_log)</!option>
-                    <!option value="1402" @(cwidActivo == "1402" ? "selected" : "")>1402 — Sergio Diaz (operador)</!option>
+                    <!option value="32352" @(cwidActivo == "32352" ? "selected" : "")>32352 — Darien Jimenez (sistemas / Planta 1)</!option>
+                    <!option value="31102" @(cwidActivo == "31102" ? "selected" : "")>31102 — Allan Castro (sistemas / Planta 1)</!option>
+                    <!option value="6926" @(cwidActivo == "6926" ? "selected" : "")>6926 — David Galvan (admin / Planta 1)</!option>
+                    <!option value="1568" @(cwidActivo == "1568" ? "selected" : "")>1568 — Jose Sanchez (jefe_log / Planta 1)</!option>
+                    <!option value="1402" @(cwidActivo == "1402" ? "selected" : "")>1402 — Sergio Diaz (operador / Planta 1)</!option>
+                    <!option value="6553" @(cwidActivo == "6553" ? "selected" : "")>6553 — Jose Antonio Fernandez Rivera (admin / Planta 4)</!option>
                 </select>
             </div>
 
@@ -193,7 +218,7 @@
                 <div class="avatar" style="background:#2563eb; color:#fff; font-weight:700;">@iniciales</div>
                 <div style="display:flex; flex-direction:column; align-items:flex-start;">
                     <span style="font-size:12px; font-weight:700; line-height:1.1; color:var(--text);">@cwidMostrar</span>
-                    <span style="font-size:10px; color:#2563eb; font-weight:800; text-transform:uppercase;">@rolBadge (@nivelJerarquico)</span>
+                    <span style="font-size:10px; color:#2563eb; font-weight:800; text-transform:uppercase;">@rolBadge (Nvl @nivelJerarquico)</span>
                 </div>
             </div>
         </div>
@@ -302,6 +327,36 @@
         </nav>
 
         <main id="main">
+
+            <!-- BANNER DE AISLAMIENTO MULTI-PLANTA -->
+            @if (esPlantaForanea)
+            {
+                <div class="banner-multiplanta" style="@(esPersonalSistemas ? "background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af;" : "background:#fffbeb; border:1px solid #fde68a; color:#92400e;")">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                        </svg>
+                        <div>
+                            @if (esPersonalSistemas)
+                            {
+                                <span>
+                                    <strong>Modo Soporte Técnico (Sistemas):</strong> Tu planta base es <strong>@plantaAsignadaNombre</strong>. Cualquier operación realizada en <strong>@plantaActivaNombre</strong> se registrará en la auditoría con justificación técnica de apoyo inter-planta.
+                                </span>
+                            }
+                            else
+                            {
+                                <span>
+                                    <strong>Modo Solo Lectura:</strong> Tu usuario pertenece a <strong>@plantaAsignadaNombre</strong>. En <strong>@plantaActivaNombre</strong> solo puedes consultar calendarios y reportes; los cambios de edición están restringidos.
+                                </span>
+                            }
+                        </div>
+                    </div>
+                    <span style="font-weight:700; font-size:11px; padding:4px 10px; border-radius:6px; flex-shrink:0; @(esPersonalSistemas ? "background:#2563eb; color:#ffffff;" : "background:#f59e0b; color:#ffffff;")">
+                        @(esPersonalSistemas ? "SISTEMAS HABILITADO" : "SOLO LECTURA")
+                    </span>
+                </div>
+            }
+
             @RenderBody()
         </main>
     </div>
@@ -356,25 +411,8 @@
             // 1. Guardar cookie para la vista
             document.cookie = `Simulador_CWID=${nuevoCwid}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`;
 
-            // 2. Ejecutar POST para actualizar los Claims de sesión en ASP.NET Core
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '/Simulador/CambiarUsuarioPorNomina';
-
-            const inputNomina = document.createElement('input');
-            inputNomina.type = 'hidden';
-            inputNomina.name = 'nomina';
-            inputNomina.value = nuevoCwid;
-            form.appendChild(inputNomina);
-
-            const inputReturn = document.createElement('input');
-            inputReturn.type = 'hidden';
-            inputReturn.name = 'returnUrl';
-            inputReturn.value = window.location.pathname + window.location.search;
-            form.appendChild(inputReturn);
-
-            document.body.appendChild(form);
-            form.submit();
+            // 2. Recargar para que IdentificacionUsuarioMiddleware reconstruya los Claims en automático
+            window.location.reload();
         }
 
         function openModal() { var m = document.getElementById('modal-overlay'); if (m) m.classList.add('open'); }

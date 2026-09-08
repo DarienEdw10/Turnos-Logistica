@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TurnosLogistica.Domain.Data;
+using TurnosLogistica.MVC.Filters;
 using TurnosLogistica.MVC.Models;
 
 namespace TurnosLogistica.MVC.Controllers;
@@ -18,14 +19,18 @@ public class RendimientoController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(DateTime? fecha, string? turno, string? linea)
     {
-        var vm = await ConsultarRendimientoAsync(fecha, turno, linea);
+        int plantaId = ObtenerPlantaActivaId();
+        ViewBag.PlantaActivaId = plantaId;
+
+        var vm = await ConsultarRendimientoAsync(fecha, turno, linea, plantaId);
         return View(vm);
     }
 
     [HttpGet]
     public async Task<IActionResult> ExportarCsv(DateTime? fecha, string? turno, string? linea)
     {
-        var vm = await ConsultarRendimientoAsync(fecha, turno, linea);
+        int plantaId = ObtenerPlantaActivaId();
+        var vm = await ConsultarRendimientoAsync(fecha, turno, linea, plantaId);
         var sb = new StringBuilder();
 
         // Encabezados CSV (compatible con Excel mediante BOM UTF-8)
@@ -42,10 +47,9 @@ public class RendimientoController : Controller
         return File(buffer, "text/csv; charset=utf-8", nombreArchivo);
     }
 
-    private async Task<RendimientoTurnoViewModel> ConsultarRendimientoAsync(DateTime? fecha, string? turno, string? linea)
+    private async Task<RendimientoTurnoViewModel> ConsultarRendimientoAsync(DateTime? fecha, string? turno, string? linea, int plantaId)
     {
         DateTime fechaFiltro = fecha ?? DateTime.Today;
-        int plantaId = ObtenerPlantaActivaId();
 
         // Joins directos basados en los modelos de dominio
         var query = from p in _context.Programaciones.AsNoTracking()
@@ -131,6 +135,7 @@ public class RendimientoController : Controller
     }
 
     [HttpPost]
+    [ServiceFilter(typeof(ValidarOperacionPlantaAttribute))] // <-- Candado Multi-Planta
     public async Task<IActionResult> ActualizarCierre([FromBody] ActualizarCierreDto dto)
     {
         if (dto == null || dto.ProgramacionId <= 0)

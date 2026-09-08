@@ -79,7 +79,6 @@ public class PlanificacionService : IPlanificacionService
       string? filtroTurno = null)
     {
         // 1. Determinar el rango de fechas según granularidad
-        DateTime fechaBase = new DateTime(anio, mes, 1);
         DateTime fechaInicio;
         DateTime fechaFin;
 
@@ -101,7 +100,7 @@ public class PlanificacionService : IPlanificacionService
             fechaFin = fechaInicio.AddMonths(1);
         }
 
-        // 2. Consulta proyectada a BD
+        // 2. Consulta proyectada a BD con horas de inicio y fin del turno
         var rawQuery = from prog in _context.Programaciones
                        join parte in _context.NumerosDeParte on prog.NumeroParteId equals parte.Id
                        join turno in _context.Turnos on prog.TurnoId equals turno.Id
@@ -122,9 +121,10 @@ public class PlanificacionService : IPlanificacionService
                            CeldaCodigo = celda != null ? celda.Codigo : "C-101",
                            parte.SapPartNumber,
                            TurnoNombre = turno.Nombre,
-                           Estado = prog.Estatus,
+                           TurnoHoraInicio = turno.HoraInicio,
+                           TurnoHoraFin = turno.HoraFin,
                            Cantidad = prog.CantidadProgramada,
-                           HorasProgramadas = prog.HorasProgramadas // <-- Proyectamos las horas guardadas
+                           HorasProgramadas = prog.HorasProgramadas
                        };
 
         // Filtros
@@ -139,15 +139,17 @@ public class PlanificacionService : IPlanificacionService
 
         var data = await rawQuery.ToListAsync();
 
-        // 3. Mapeo en memoria según la agrupación:
+        // 3. Mapeo en memoria calculando el estado según reloj y turnos
         List<EventoCalendarioDto> eventos;
 
         if (agrupacion == "proyecto")
         {
-            eventos = data.GroupBy(d => new { d.Fecha, d.TurnoNombre, d.ProyectoCodigo })
+            eventos = data.GroupBy(d => new { d.Fecha, d.TurnoNombre, d.TurnoHoraInicio, d.TurnoHoraFin, d.ProyectoCodigo })
                 .Select(g =>
                 {
                     var primerItem = g.First();
+                    var (estadoTexto, estadoCss) = CalcularEstadoOperativo(g.Key.Fecha, g.Key.TurnoHoraInicio, g.Key.TurnoHoraFin);
+
                     return new EventoCalendarioDto
                     {
                         Id = primerItem.Id,
@@ -157,18 +159,21 @@ public class PlanificacionService : IPlanificacionService
                         CeldaCodigo = $"{g.Select(x => x.CeldaCodigo).Distinct().Count()} Celdas",
                         SapPartNumber = $"{g.Count()} Partes",
                         TurnoClave = g.Key.TurnoNombre,
-                        Estado = primerItem.Estado,
-                        Horas = (double)Math.Round(g.Sum(x => x.HorasProgramadas), 1), // <-- Suma real
+                        Estado = estadoTexto,
+                        EstadoCss = estadoCss,
+                        Horas = (double)Math.Round(g.Sum(x => x.HorasProgramadas), 1),
                         Cantidad = g.Sum(x => x.Cantidad)
                     };
                 }).ToList();
         }
         else if (agrupacion == "linea")
         {
-            eventos = data.GroupBy(d => new { d.Fecha, d.TurnoNombre, d.ProyectoCodigo, d.LineaNombre })
+            eventos = data.GroupBy(d => new { d.Fecha, d.TurnoNombre, d.TurnoHoraInicio, d.TurnoHoraFin, d.ProyectoCodigo, d.LineaNombre })
                 .Select(g =>
                 {
                     var primerItem = g.First();
+                    var (estadoTexto, estadoCss) = CalcularEstadoOperativo(g.Key.Fecha, g.Key.TurnoHoraInicio, g.Key.TurnoHoraFin);
+
                     return new EventoCalendarioDto
                     {
                         Id = primerItem.Id,
@@ -178,7 +183,8 @@ public class PlanificacionService : IPlanificacionService
                         CeldaCodigo = $"{g.Select(x => x.CeldaCodigo).Distinct().Count()} Celdas",
                         SapPartNumber = $"{g.Count()} Partes",
                         TurnoClave = g.Key.TurnoNombre,
-                        Estado = primerItem.Estado,
+                        Estado = estadoTexto,
+                        EstadoCss = estadoCss,
                         Horas = (double)Math.Round(g.Sum(x => x.HorasProgramadas), 1),
                         Cantidad = g.Sum(x => x.Cantidad)
                     };
@@ -186,10 +192,12 @@ public class PlanificacionService : IPlanificacionService
         }
         else if (agrupacion == "celda")
         {
-            eventos = data.GroupBy(d => new { d.Fecha, d.TurnoNombre, d.ProyectoCodigo, d.LineaNombre, d.CeldaCodigo })
+            eventos = data.GroupBy(d => new { d.Fecha, d.TurnoNombre, d.TurnoHoraInicio, d.TurnoHoraFin, d.ProyectoCodigo, d.LineaNombre, d.CeldaCodigo })
                 .Select(g =>
                 {
                     var primerItem = g.First();
+                    var (estadoTexto, estadoCss) = CalcularEstadoOperativo(g.Key.Fecha, g.Key.TurnoHoraInicio, g.Key.TurnoHoraFin);
+
                     return new EventoCalendarioDto
                     {
                         Id = primerItem.Id,
@@ -199,7 +207,8 @@ public class PlanificacionService : IPlanificacionService
                         CeldaCodigo = g.Key.CeldaCodigo,
                         SapPartNumber = $"{g.Count()} Partes",
                         TurnoClave = g.Key.TurnoNombre,
-                        Estado = primerItem.Estado,
+                        Estado = estadoTexto,
+                        EstadoCss = estadoCss,
                         Horas = (double)Math.Round(g.Sum(x => x.HorasProgramadas), 1),
                         Cantidad = g.Sum(x => x.Cantidad)
                     };
@@ -207,18 +216,24 @@ public class PlanificacionService : IPlanificacionService
         }
         else // "parte"
         {
-            eventos = data.Select(d => new EventoCalendarioDto
+            eventos = data.Select(d =>
             {
-                Id = d.Id,
-                Fecha = d.Fecha,
-                ProyectoCodigo = d.ProyectoCodigo,
-                LineaNombre = d.LineaNombre,
-                CeldaCodigo = d.CeldaCodigo,
-                SapPartNumber = d.SapPartNumber,
-                TurnoClave = d.TurnoNombre,
-                Estado = d.Estado,
-                Horas = (double)Math.Round(d.HorasProgramadas, 1),
-                Cantidad = d.Cantidad
+                var (estadoTexto, estadoCss) = CalcularEstadoOperativo(d.Fecha, d.TurnoHoraInicio, d.TurnoHoraFin);
+
+                return new EventoCalendarioDto
+                {
+                    Id = d.Id,
+                    Fecha = d.Fecha,
+                    ProyectoCodigo = d.ProyectoCodigo,
+                    LineaNombre = d.LineaNombre,
+                    CeldaCodigo = d.CeldaCodigo,
+                    SapPartNumber = d.SapPartNumber,
+                    TurnoClave = d.TurnoNombre,
+                    Estado = estadoTexto,
+                    EstadoCss = estadoCss,
+                    Horas = (double)Math.Round(d.HorasProgramadas, 1),
+                    Cantidad = d.Cantidad
+                };
             }).ToList();
         }
 
@@ -276,7 +291,7 @@ public class PlanificacionService : IPlanificacionService
             Fecha = model.FechaProduccion.Date,
             TurnoId = model.TurnoId,
             CantidadProgramada = cantidadFinal,
-            HorasProgramadas = (decimal)model.TiempoEstimadoHoras, // <-- Guardamos las horas reales ingresadas (ej. 4.0)
+            HorasProgramadas = (decimal)model.TiempoEstimadoHoras,
             OrdenProducir = 1,
             VentanasSalida = 4,
             Estatus = "pendiente",
@@ -341,5 +356,32 @@ public class PlanificacionService : IPlanificacionService
             FiltroUsuario = usuario,
             Registros = registros
         };
+    }
+
+    private static (string EstadoTexto, string EstadoCss) CalcularEstadoOperativo(DateTime fechaProduccion, TimeSpan horaInicio, TimeSpan horaFin)
+    {
+        DateTime ahora = DateTime.Now;
+
+        DateTime inicioTurno = fechaProduccion.Date.Add(horaInicio);
+        DateTime finTurno = fechaProduccion.Date.Add(horaFin);
+
+        // Cruce de medianoche (ej. 21:30 a 06:00)
+        if (horaFin <= horaInicio)
+        {
+            finTurno = finTurno.AddDays(1);
+        }
+
+        if (ahora < inicioTurno)
+        {
+            return ("PENDIENTE", "pendiente");
+        }
+        else if (ahora >= inicioTurno && ahora <= finTurno)
+        {
+            return ("ACTIVO", "activo");
+        }
+        else
+        {
+            return ("TERMINADO", "terminado");
+        }
     }
 }

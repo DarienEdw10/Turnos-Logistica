@@ -1,7 +1,10 @@
 @{
     ViewData["Title"] = "Gestión de Colaboradores y Permisos";
-    bool esSistemas = ViewBag.EsSistemas ?? true;
-    int nivelUsuarioActual = ViewBag.NivelUsuarioActual ?? 40;
+    bool esSistemas = ViewBag.EsSistemas ?? false;
+    int nivelUsuarioActual = ViewBag.NivelUsuarioActual ?? 10;
+    bool soloLectura = ViewBag.SoloLectura ?? false;
+    int plantaActivaId = ViewBag.PlantaActivaId ?? 1;
+    int plantaAsignadaId = ViewBag.PlantaAsignadaId ?? 1;
 }
 
 <style>
@@ -112,10 +115,36 @@
         gap: 8px;
         transition: background 0.2s;
     }
-    .btn-guardar-permiso:hover {
+    .btn-guardar-permiso:hover:not(:disabled) {
         background: #059669;
     }
+    .btn-guardar-permiso:disabled {
+        background: #94a3b8 !important;
+        cursor: not-allowed;
+        opacity: 0.65;
+    }
 </style>
+
+<div class="page-header" style="margin-bottom: 16px;">
+    <div>
+        <div class="page-title" style="font-size:20px; font-weight:700;">Gestión de Colaboradores y Permisos</div>
+        <div class="page-subtitle" style="color:var(--text-muted); font-size:14px;">
+            Asignación de roles en plataforma — Planta Activa: <strong>Planta @plantaActivaId</strong>
+        </div>
+    </div>
+</div>
+
+@if (soloLectura)
+{
+    <div class="notice notice-warn" style="display:flex; align-items:center; gap:10px; padding:12px 16px; border-radius:8px; margin-bottom:16px; background:#fffbeb; border:1px solid #fcd34d; font-size:13px; color:#92400e;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#d97706" style="flex-shrink:0;">
+            <path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
+        </svg>
+        <div>
+            🔒 <strong>Modo Solo Lectura:</strong> Perteneces a la <strong>Planta @plantaAsignadaId</strong>. En Planta @plantaActivaId solo tienes permisos de consulta; la gestión de colaboradores está reservada para administradores locales o personal de Sistemas.
+        </div>
+    </div>
+}
 
 <div class="usuarios-container">
 
@@ -185,7 +214,7 @@
 
             <div class="form-group" style="margin-bottom:20px;">
                 <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:6px; text-transform:uppercase;">Nivel de Acceso en Sistema:</label>
-                <select id="ddlNivel" class="form-control" style="padding:10px; font-weight:600;">
+                <select id="ddlNivel" class="form-control" style="padding:10px; font-weight:600;" @(soloLectura ? "disabled" : "")>
                     <option value="10">Nivel 10 - Operador Logístico (Solo Agenda su Área)</option>
                     <option value="20">Nivel 20 - Jefe de Logística (Programa y Aprueba)</option>
                     
@@ -199,28 +228,39 @@
                 <div style="font-size:12px; color:var(--text-muted); line-height:1.5; margin-top:12px; padding:10px; background:#f8fafc; border-radius:6px; border:1px solid #e2e8f0;">
                     @if (esSistemas)
                     {
-                        <div>* <strong>Sistemas:</strong> Puede crear y asignar cualquier rol en la plataforma.</div>
+                        <div>* <strong>Sistemas:</strong> Puede crear y asignar cualquier rol inter-planta con registro de auditoría técnica.</div>
                     }
                     else
                     {
-                        <div>* <strong>Administrador:</strong> Puede otorgar roles a Jefes de Logística (Nivel 20) y Operadores (Nivel 10).</div>
+                        <div>* <strong>Administrador:</strong> Puede otorgar roles a Jefes de Logística (Nivel 20) y Operadores (Nivel 10) exclusivamente en su planta asignada.</div>
                         <div style="margin-top:2px; color:#b45309;">* Solo el rol <strong>Sistemas</strong> puede asignar nuevos Administradores.</div>
                     }
                 </div>
             </div>
 
-            <button type="button" id="btnGuardarPermiso" class="btn-guardar-permiso" disabled style="opacity:0.6;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                </svg>
-                Guardar Permiso
-            </button>
+            @if (soloLectura)
+            {
+                <button type="button" class="btn-guardar-permiso" disabled style="opacity:0.6; cursor:not-allowed;">
+                    🔒 Guardar Permiso (Solo Lectura)
+                </button>
+            }
+            else
+            {
+                <button type="button" id="btnGuardarPermiso" class="btn-guardar-permiso" disabled style="opacity:0.6;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                    </svg>
+                    Guardar Permiso
+                </button>
+            }
         </div>
     </div>
 </div>
 
 @section Scripts {
 <script>
+    const esSoloLectura = @(soloLectura ? "true" : "false");
+
     document.addEventListener('DOMContentLoaded', () => {
         const txtBuscar = document.getElementById('txtBuscarEmpleado');
         const btnBuscar = document.getElementById('btnBuscarEmpleado');
@@ -257,8 +297,9 @@
                                     data-cwid="${e.cwid || ''}"
                                     data-nombre="${e.nombre || ''}"
                                     data-numero="${e.numero || ''}"
+                                    ${esSoloLectura ? 'disabled style="opacity:0.55; cursor:not-allowed;" title="Modo Solo Lectura"' : ''}
                                     style="padding:2px 10px; font-size:12px;">
-                                Elegir &rarr;
+                                ${esSoloLectura ? '🔒 Ver' : 'Elegir &rarr;'}
                             </button>
                         </td>
                     </tr>
@@ -278,8 +319,10 @@
                         document.getElementById('hdnNombre').value = nombre;
                         document.getElementById('hdnNomina').value = numero;
 
-                        btnGuardar.disabled = !cwid;
-                        btnGuardar.style.opacity = !cwid ? '0.6' : '1';
+                        if (!esSoloLectura && btnGuardar) {
+                            btnGuardar.disabled = !cwid;
+                            btnGuardar.style.opacity = !cwid ? '0.6' : '1';
+                        }
 
                         document.querySelectorAll('.row-empleado').forEach(r => r.classList.remove('selected'));
                         tr.classList.add('selected');
@@ -301,51 +344,63 @@
 
         btnBuscar.addEventListener('click', () => cargarEmpleados(txtBuscar.value.trim()));
 
-        btnGuardar.addEventListener('click', async () => {
-            const cwid = document.getElementById('hdnCwid').value;
-            const noEmpleado = document.getElementById('hdnNomina').value;
-            const nombre = document.getElementById('hdnNombre').value;
-            const nivel = parseInt(document.getElementById('ddlNivel').value, 10);
+        if (btnGuardar && !esSoloLectura) {
+            btnGuardar.addEventListener('click', async () => {
+                if (esSoloLectura) {
+                    alert('Modo Solo Lectura: Acción bloqueada en plantas foráneas.');
+                    return;
+                }
 
-            if (!cwid) {
-                alert('El colaborador seleccionado no tiene una cuenta de red (CWID) vinculada.');
-                return;
-            }
+                const cwid = document.getElementById('hdnCwid').value;
+                const noEmpleado = document.getElementById('hdnNomina').value;
+                const nombre = document.getElementById('hdnNombre').value;
+                const nivel = parseInt(document.getElementById('ddlNivel').value, 10);
 
-            btnGuardar.disabled = true;
-            btnGuardar.innerText = 'Guardando...';
+                if (!cwid) {
+                    alert('El colaborador seleccionado no tiene una cuenta de red (CWID) vinculada.');
+                    return;
+                }
 
-            try {
-                const resp = await fetch('/Usuarios/AsignarNivel', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ cwid, noEmpleado, nombre, nivel })
-                });
-                const res = await resp.json();
+                btnGuardar.disabled = true;
+                btnGuardar.innerText = 'Guardando...';
 
-                msgBox.style.display = 'block';
-                if (res.success) {
-                    msgBox.style.background = '#dcfce7';
-                    msgBox.style.border = '1px solid #86efac';
-                    msgBox.style.color = '#15803d';
-                    msgBox.innerText = `✔ ${res.message}`;
-                } else {
+                try {
+                    const resp = await fetch('/Usuarios/AsignarNivel', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ cwid, noEmpleado, nombre, nivel })
+                    });
+                    
+                    if (resp.status === 403) {
+                        throw new Error('Operación rechazada: No tienes permisos para gestionar roles en esta planta.');
+                    }
+
+                    const res = await resp.json();
+
+                    msgBox.style.display = 'block';
+                    if (res.success) {
+                        msgBox.style.background = '#dcfce7';
+                        msgBox.style.border = '1px solid #86efac';
+                        msgBox.style.color = '#15803d';
+                        msgBox.innerText = `✔ ${res.message}`;
+                    } else {
+                        msgBox.style.background = '#fee2e2';
+                        msgBox.style.border = '1px solid #f87171';
+                        msgBox.style.color = '#991b1b';
+                        msgBox.innerText = `✖ ${res.message}`;
+                    }
+                } catch (err) {
+                    msgBox.style.display = 'block';
                     msgBox.style.background = '#fee2e2';
                     msgBox.style.border = '1px solid #f87171';
                     msgBox.style.color = '#991b1b';
-                    msgBox.innerText = `✖ ${res.message}`;
+                    msgBox.innerText = `✖ ${err.message}`;
+                } finally {
+                    btnGuardar.disabled = false;
+                    btnGuardar.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Guardar Permiso`;
                 }
-            } catch (err) {
-                msgBox.style.display = 'block';
-                msgBox.style.background = '#fee2e2';
-                msgBox.style.border = '1px solid #f87171';
-                msgBox.style.color = '#991b1b';
-                msgBox.innerText = `✖ Error de comunicación: ${err.message}`;
-            } finally {
-                btnGuardar.disabled = false;
-                btnGuardar.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Guardar Permiso`;
-            }
-        });
+            });
+        }
 
         cargarEmpleados();
     });

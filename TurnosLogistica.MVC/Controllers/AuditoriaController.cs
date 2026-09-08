@@ -18,7 +18,15 @@ public class AuditoriaController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(DateTime? fechaInicio, DateTime? fechaFin)
     {
+        // 1. Candado de seguridad: solo Admin (30) y Sistemas (40)
+        if (!TienePermisoAuditoria())
+        {
+            return Forbid();
+        }
+
         int plantaId = ObtenerPlantaActivaId();
+        ViewBag.PlantaActivaId = plantaId;
+
         DateTime fInicio = fechaInicio ?? DateTime.Today.AddDays(-30);
         DateTime fFin = fechaFin ?? DateTime.Today;
 
@@ -47,6 +55,12 @@ public class AuditoriaController : Controller
     [HttpGet]
     public async Task<IActionResult> ExportarCsv(DateTime? fechaInicio, DateTime? fechaFin)
     {
+        // 1. Candado de seguridad: solo Admin (30) y Sistemas (40)
+        if (!TienePermisoAuditoria())
+        {
+            return Forbid();
+        }
+
         int plantaId = ObtenerPlantaActivaId();
         DateTime fInicio = fechaInicio ?? DateTime.Today.AddDays(-30);
         DateTime fFin = fechaFin ?? DateTime.Today;
@@ -63,13 +77,26 @@ public class AuditoriaController : Controller
 
         foreach (var r in registros)
         {
-            string cleanRazon = r.Razon.Replace("\"", "\"\"");
-            string cleanAgenda = r.AgendaDetalle.Replace("\"", "\"\"");
+            string cleanRazon = (r.Razon ?? string.Empty).Replace("\"", "\"\"");
+            string cleanAgenda = (r.AgendaDetalle ?? string.Empty).Replace("\"", "\"\"");
             sb.AppendLine($"{r.HistorialId},{r.FechaAccion:dd/MM/yyyy HH:mm},{r.UsuarioResponsable},{r.RolUsuario},{r.Accion},\"{cleanAgenda}\",\"{cleanRazon}\"");
         }
 
         byte[] buffer = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(sb.ToString())).ToArray();
-        return File(buffer, "text/csv", $"Auditoria_Planta{plantaId}_{DateTime.Now:yyyyMMdd_HHmm}.csv");
+        return File(buffer, "text/csv; charset=utf-8", $"Auditoria_Planta{plantaId}_{DateTime.Now:yyyyMMdd_HHmm}.csv");
+    }
+
+    private bool TienePermisoAuditoria()
+    {
+        string? nivelStr = User.FindFirst("NivelJerarquico")?.Value;
+        string rol = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.ToLower() ?? string.Empty;
+
+        if (int.TryParse(nivelStr, out int nivel) && nivel >= 30)
+        {
+            return true;
+        }
+
+        return rol == "admin" || rol == "sistemas";
     }
 
     private int ObtenerPlantaActivaId()

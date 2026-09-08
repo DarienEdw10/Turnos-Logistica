@@ -15,38 +15,71 @@ public class SimuladorController : Controller
     }
 
     [HttpPost]
-    public async Task<IActionResult> CambiarUsuarioPorNomina(string nomina, string? returnUrl = null)
+    public async Task<IActionResult> CambiarUsuarioPorNomina([FromForm] string? nomina, [FromBody] CambiarNominaDto? dtoJson, [FromQuery] string? returnUrl = null)
     {
-        if (string.IsNullOrWhiteSpace(nomina))
-            return BadRequest("El número de control/CWID es requerido.");
+        string? valorNomina = nomina ?? dtoJson?.Nomina;
 
-        string busqueda = nomina.Trim();
+        if (string.IsNullOrWhiteSpace(valorNomina))
+        {
+            return BadRequest(new { success = false, message = "El número de control/CWID es requerido." });
+        }
+
+        string busqueda = valorNomina.Trim();
 
         var usuario = await _context.Usuarios
             .AsNoTracking()
-            .FirstOrDefaultAsync(u => (u.NoEmpleado == busqueda || u.CWID == busqueda) && u.Activo);
+            .FirstOrDefaultAsync(u => (u.NoEmpleado == busqueda || u.CWID == busqueda || u.Email.StartsWith(busqueda)) && u.Activo);
 
         if (usuario == null)
-            return NotFound($"No se encontró ningún usuario activo con el número de control/CWID: {nomina}");
+        {
+            return NotFound(new { success = false, message = $"No se encontró ningún usuario activo con Nómina/CWID: {busqueda}" });
+        }
 
-        // Guardar cookies para la vista y la sesión activa del simulador
-        Response.Cookies.Append("Simulador_CWID", usuario.NoEmpleado, new CookieOptions
+        string cwidCookie = !string.IsNullOrWhiteSpace(usuario.NoEmpleado) ? usuario.NoEmpleado : (usuario.CWID ?? busqueda);
+
+        // 1. Cookie para que IdentificacionUsuarioMiddleware reconstruya los Claims en la siguiente petición
+        Response.Cookies.Append("Simulador_CWID", cwidCookie, new CookieOptions
         {
             Path = "/",
-            Expires = DateTimeOffset.Now.AddDays(7),
-            SameSite = SameSiteMode.Lax
+            Expires = DateTimeOffset.UtcNow.AddDays(7),
+            SameSite = SameSiteMode.Lax,
+            HttpOnly = false
         });
 
+        // 2. Alinear la planta activa con la planta asignada nativa del usuario
         Response.Cookies.Append("PlantaActivaId", usuario.PlantaId.ToString(), new CookieOptions
         {
             Path = "/",
-            Expires = DateTimeOffset.Now.AddDays(7),
-            SameSite = SameSiteMode.Lax
+            Expires = DateTimeOffset.UtcNow.AddDays(7),
+            SameSite = SameSiteMode.Lax,
+            HttpOnly = false
         });
 
-        if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
-            return Redirect(returnUrl);
+        // Respuesta para llamadas vía Fetch/AJAX
+        if (Request.Headers.Accept.ToString().Contains("application/json") || Request.ContentType?.Contains("application/json") == true)
+        {
+            return Ok(new
+            {
+                success = true,
+                cwid = cwidCookie,
+                nombre = usuario.Nombre,
+                plantaId = usuario.PlantaId,
+                rol = usuario.Rol,
+                nivel = usuario.Nivel
+            });
+        }
 
-        return RedirectToAction("Index", "Calendario");
+        // Respuesta para llamadas POST vía formulario
+        if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+        {
+            return Redirect(returnUrl);
+        }
+
+        return RedirectToAction("Index", "Calendario", new { plantaId = usuario.PlantaId });
+    }
+
+    public class CambiarNominaDto
+    {
+        public string Nomina { get; set; } = string.Empty;
     }
 }

@@ -1,3 +1,7 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using TurnosLogistica.Domain.Data;
 using TurnosLogistica.Domain.Models;
@@ -31,7 +35,13 @@ public class UsuarioAuthService
         _ => "operador"
     };
 
-    public async Task<Usuario> SincronizarUsuarioAsync(string cwid, string noEmpleado, string nombre, string email, int nivel, int plantaId)
+    public async Task<Usuario> SincronizarUsuarioAsync(
+        string cwid, 
+        string noEmpleado, 
+        string nombre, 
+        string email, 
+        int nivel, 
+        int plantaId)
     {
         string cwidLimpio = LimpiarCwid(cwid);
 
@@ -79,5 +89,203 @@ public class UsuarioAuthService
             .FirstOrDefaultAsync(x => x.CWID == cwidLimpio && x.Activo);
 
         return u?.Nivel ?? 0;
+    }
+
+    // =========================================================================
+    // 1. IDENTIFICACIÓN AUTOMÁTICA TRANSPARENTE (SSO / SIMULADOR / SIN LOGIN)
+    // =========================================================================
+    public async Task<(bool Exito, string Mensaje, Usuario? Usuario)> IdentificarUsuarioAutomaticoAsync(
+        string rawCwid, 
+        HttpContext httpContext)
+    {
+        string cwid = LimpiarCwid(rawCwid);
+        if (string.IsNullOrWhiteSpace(cwid))
+        {
+            return (false, "No se detectó CWID o identificador en la sesión.", null);
+        }
+
+        var usuario = await _context.Usuarios
+            .FirstOrDefaultAsync(u => u.CWID == cwid || u.NoEmpleado == cwid);
+
+        if (usuario == null)
+        {
+            usuario = new Usuario
+            {
+                PlantaId = 1,
+                CWID = cwid,
+                NoEmpleado = cwid,
+                Nombre = cwid,
+                Email = $"{cwid.ToLower()}@autotek.com",
+                Rol = "operador",
+                Nivel = 10,
+                Activo = true,
+                CreadoAt = DateTime.UtcNow
+            };
+            _context.Usuarios.Add(usuario);
+            await _context.SaveChangesAsync();
+        }
+
+        if (!usuario.Activo)
+        {
+            return (false, "El usuario identificado se encuentra inactivo.", null);
+        }
+
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
+            new Claim("CWID", usuario.CWID ?? usuario.NoEmpleado),
+            new Claim(ClaimTypes.Name, usuario.Nombre),
+            new Claim(ClaimTypes.Role, usuario.Rol.ToLowerInvariant()),
+            new Claim("NivelJerarquico", usuario.Nivel.ToString()),
+            new Claim("PlantaAsignadaId", usuario.PlantaId.ToString()),
+            new Claim("PlantaAsignadaNombre", $"Planta {usuario.PlantaId}")
+        };
+
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        var principal = new ClaimsPrincipal(identity);
+
+        // await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);    
+        httpContext.User = principal;
+        if (!httpContext.Request.Cookies.ContainsKey("PlantaActivaId"))
+        {
+            httpContext.Response.Cookies.Append("PlantaActivaId", usuario.PlantaId.ToString(), new CookieOptions
+            {
+                Path = "/",
+                Expires = DateTimeOffset.UtcNow.AddDays(30),
+                SameSite = SameSiteMode.Lax
+            });
+        }
+
+        return (true, "Identificado automáticamente.", usuario);
+    }
+
+    // =========================================================================
+    // 2. AUTENTICACIÓN HÍBRIDA (DLL CORPORATIVA / USUARIOS DE PRUEBA LOCALES)
+    // =========================================================================
+    public async Task<(bool Exito, string Mensaje, Usuario? Usuario)> AutenticarEIniciarSesionAsync(
+        string rawCwid, 
+        string password, 
+        HttpContext httpContext)
+    {
+        string cwid = LimpiarCwid(rawCwid);
+        if (string.IsNullOrWhiteSpace(cwid))
+        {
+            return (false, "Debe ingresar su CWID / Nómina.", null);
+        }
+
+        bool validado = false;
+        string nombreCorp = string.Empty;
+        string emailCorp = string.Empty;
+        string noEmpleadoCorp = cwid;
+        int plantaIdCorp = 0;
+        int nivelCorp = 10;
+
+        // ---------------------------------------------------------------------
+        // PASO A: LLAMADA A LA DLL CORPORATIVA (PRODUCCIÓN)
+        // ---------------------------------------------------------------------
+        /*
+        try
+        {
+            // var servicioAuth = new Magna.Cosma.Autotek.Autentificacion.Library.Autenticacion();
+            // var emp = servicioAuth.Validar(cwid, password);
+            // if (emp != null && emp.Activo)
+            // {
+            //     validado = true;
+            //     nombreCorp = $"{emp.ApellidoPaterno} {emp.ApellidoMaterno}".Trim();
+            //     noEmpleadoCorp = emp.Id.ToString();
+            // }
+        }
+        catch (Exception)
+        {
+            validado = false;
+        }
+        */
+
+        // ---------------------------------------------------------------------
+        // PASO B: FALLBACK PARA USUARIOS LOCALES DE PRUEBA (NIVELES 10, 20, 30, 40)
+        // ---------------------------------------------------------------------
+        if (!validado)
+        {
+            var usuarioPrueba = await _context.Usuarios
+                .FirstOrDefaultAsync(u => (u.CWID == cwid || u.NoEmpleado == cwid) && u.Activo);
+
+            if (usuarioPrueba != null)
+            {
+                validado = true;
+                nombreCorp = usuarioPrueba.Nombre;
+                emailCorp = usuarioPrueba.Email;
+                noEmpleadoCorp = usuarioPrueba.NoEmpleado;
+                nivelCorp = usuarioPrueba.Nivel;
+                plantaIdCorp = usuarioPrueba.PlantaId;
+            }
+        }
+
+        if (!validado)
+        {
+            return (false, "El usuario o CWID ingresado no existe o se encuentra inactivo.", null);
+        }
+
+        // ---------------------------------------------------------------------
+        // PASO C: SINCRONIZACIÓN CON BASE DE DATOS LOCAL
+        // ---------------------------------------------------------------------
+        var usuarioLocal = await _context.Usuarios
+            .FirstOrDefaultAsync(u => u.CWID == cwid || u.NoEmpleado == noEmpleadoCorp);
+
+        Usuario usuarioFinal;
+        if (usuarioLocal != null)
+        {
+            if (!usuarioLocal.Activo)
+            {
+                return (false, "Su usuario se encuentra inactivo en la plataforma.", null);
+            }
+
+            usuarioFinal = await SincronizarUsuarioAsync(
+                cwid,
+                usuarioLocal.NoEmpleado,
+                string.IsNullOrEmpty(nombreCorp) ? usuarioLocal.Nombre : nombreCorp,
+                string.IsNullOrEmpty(emailCorp) ? usuarioLocal.Email : emailCorp,
+                usuarioLocal.Nivel,
+                usuarioLocal.PlantaId
+            );
+        }
+        else
+        {
+            usuarioFinal = await SincronizarUsuarioAsync(
+                cwid,
+                noEmpleadoCorp,
+                nombreCorp,
+                emailCorp,
+                nivelCorp,
+                plantaIdCorp > 0 ? plantaIdCorp : 1
+            );
+        }
+
+        // ---------------------------------------------------------------------
+        // PASO D: CREAR CLAIMS DE SESIÓN (AISLAMIENTO POR PLANTA)
+        // ---------------------------------------------------------------------
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, usuarioFinal.Id.ToString()),
+            new Claim("CWID", usuarioFinal.CWID ?? usuarioFinal.NoEmpleado),
+            new Claim(ClaimTypes.Name, usuarioFinal.Nombre),
+            new Claim(ClaimTypes.Role, usuarioFinal.Rol.ToLowerInvariant()),
+            new Claim("NivelJerarquico", usuarioFinal.Nivel.ToString()),
+            new Claim("PlantaAsignadaId", usuarioFinal.PlantaId.ToString()),
+            new Claim("PlantaAsignadaNombre", $"Planta {usuarioFinal.PlantaId}")
+        };
+
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        var principal = new ClaimsPrincipal(identity);
+
+        await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+
+        httpContext.Response.Cookies.Append("PlantaActivaId", usuarioFinal.PlantaId.ToString(), new CookieOptions
+        {
+            Path = "/",
+            Expires = DateTimeOffset.UtcNow.AddDays(30),
+            SameSite = SameSiteMode.Lax
+        });
+
+        return (true, "Acceso concedido.", usuarioFinal);
     }
 }

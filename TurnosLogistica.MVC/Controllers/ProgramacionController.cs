@@ -1,7 +1,9 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TurnosLogistica.Domain.Data;
 using TurnosLogistica.Domain.Models;
+using TurnosLogistica.MVC.Filters;
 using TurnosLogistica.MVC.Models;
 using TurnosLogistica.MVC.Services;
 
@@ -21,17 +23,14 @@ public class ProgramacionController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(int? plantaId)
     {
-        // 1. Obtener planta activa desde parámetro de URL o Cookie (default 1)
         int plantaActiva = plantaId
             ?? (Request.Cookies.TryGetValue("PlantaActivaId", out string? cookieVal) && int.TryParse(cookieVal, out int parsedId) ? parsedId : 1);
 
         ViewBag.PlantaActivaId = plantaActiva;
 
-        // 2. Cargar Proyectos de esa planta
         var proyectos = await _service.ObtenerProyectosPorPlantaAsync(plantaActiva);
         ViewBag.Proyectos = proyectos.ToList();
 
-        // 3. Cargar Turnos EXCLUSIVOS de esa planta
         var turnos = await _service.ObtenerTurnosPorPlantaAsync(plantaActiva);
         ViewBag.Turnos = turnos.OrderBy(t => t.HoraInicio).Select(t => new
         {
@@ -46,6 +45,7 @@ public class ProgramacionController : Controller
 
         return View(new ProgramacionFormViewModel());
     }
+
     [HttpGet]
     public async Task<IActionResult> ObtenerLineasPorProyecto(int proyectoId)
     {
@@ -100,9 +100,11 @@ public class ProgramacionController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [ServiceFilter(typeof(ValidarOperacionPlantaAttribute))] // <-- Candado Multi-Planta
     public async Task<IActionResult> Guardar(ProgramacionFormViewModel model)
     {
         int plantaId = ObtenerPlantaActivaId();
+        int usuarioId = ObtenerUsuarioSesionId();
 
         if (!ModelState.IsValid)
         {
@@ -128,8 +130,128 @@ public class ProgramacionController : Controller
             return View("Index", model);
         }
 
-        await _service.GuardarProgramacionAsync(model, usuarioId: 1);
+        await _service.GuardarProgramacionAsync(model, usuarioId: usuarioId);
         return RedirectToAction("Index", "Calendario", new { mes = model.FechaProduccion.Month, anio = model.FechaProduccion.Year });
+    }
+
+    [HttpPost]
+    [ServiceFilter(typeof(ValidarOperacionPlantaAttribute))] // <-- Candado Multi-Planta
+    public async Task<IActionResult> GuardarProgramacionMasiva([FromBody] ProgramacionMasivaDto dto)
+    {
+        if (dto == null || !dto.Asignaciones.Any() || !dto.Fechas.Any() || dto.TurnoId <= 0)
+        {
+            return BadRequest(new { success = false, message = "Debe asignar al menos una celda válida, una fecha y un turno." });
+        }
+
+        int usuarioId = ObtenerUsuarioSesionId();
+        int registrosProcesados = 0;
+
+        try
+        {
+            var strategy = _context.Database.CreateExecutionStrategy();
+
+            await strategy.ExecuteAsync(async () =>
+            {
+                foreach (var item in dto.Asignaciones)
+                {
+                    if (item.ParteId <= 0 || item.CantidadPiezas <= 0) continue;
+
+                    foreach (var fecha in dto.Fechas)
+                    {
+                        var model = new ProgramacionFormViewModel
+                        {
+                            CeldaId = item.CeldaId,
+                            FechaProduccion = fecha.Date,
+                            TurnoId = dto.TurnoId,
+                            NumeroParteId = item.ParteId,
+                            TiempoEstimadoHoras = (double)dto.HorasNetas,
+                            CantidadProgramada = item.CantidadPiezas,
+                            RazonObligatoria = dto.RazonCambio ?? "Programación masiva balanceada"
+                        };
+
+                        await _service.GuardarProgramacionAsync(model, usuarioId: usuarioId);
+                        registrosProcesados++;
+                    }
+                }
+            });
+
+            return Json(new
+            {
+                success = true,
+                message = $"Programación procesada con éxito ({registrosProcesados} órdenes generadas)."
+            });
+        }
+        catch (Exception ex)
+        {
+            string detalle = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
+            return StatusCode(500, new { success = false, message = $"Error al procesar: {detalle}" });
+        }
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ObtenerPartesPorCeldas([FromQuery] List<int> celdaIds)
+    {
+        if (celdaIds == null || !celdaIds.Any())
+            return Json(new List<object>());
+
+        var celdaIdsNullable = celdaIds.Select(id => (int?)id).ToList();
+
+        var partes = await (from p in _context.NumerosDeParte.AsNoTracking()
+                            where p.CeldaId != null
+                                  && celdaIdsNullable.Contains(p.CeldaId)
+                                  && p.Activo
+                            join c in _context.Celdas.AsNoTracking()
+                                 on p.CeldaId equals (int?)c.Id
+                            orderby c.Codigo, p.SapPartNumber
+                            select new
+                            {
+                                id = p.Id,
+                                texto = p.SapPartNumber + " — " + p.Descripcion,
+                                celdaId = p.CeldaId ?? 0,
+                                celdaCodigo = c.Codigo ?? ("Celda " + c.Id)
+                            }).ToListAsync();
+
+        return Json(partes);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ObtenerParosYHorasTurno(int turnoId)
+    {
+        var turno = await _context.Turnos
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == turnoId);
+
+        if (turno == null)
+            return NotFound(new { message = "Turno no encontrado." });
+
+        double horasBrutas = Math.Round(turno.DuracionHoras, 2);
+
+        var paros = await _context.TurnoParos
+            .AsNoTracking()
+            .Where(p => p.TurnoId == turnoId && p.EsProgramado && p.Activo)
+            .Select(p => new
+            {
+                id = p.Id,
+                tipoParo = p.TipoParo,
+                descripcion = p.Descripcion ?? p.TipoParo,
+                duracionMinutos = p.DuracionMinutos
+            })
+            .ToListAsync();
+
+        double totalMinutosParo = paros.Sum(p => p.duracionMinutos);
+        double horasParos = Math.Round(totalMinutosParo / 60.0, 2);
+        double horasNetas = Math.Max(0, Math.Round(horasBrutas - horasParos, 2));
+
+        return Json(new
+        {
+            turnoId = turno.Id,
+            nombre = turno.Nombre,
+            horasBrutas,
+            horasParos,
+            horasNetas,
+            tieneParos = paros.Any(),
+            paros
+        });
     }
 
     private int ObtenerPlantaActivaId()
@@ -140,66 +262,30 @@ public class ProgramacionController : Controller
         }
         return 1;
     }
+
+    private int ObtenerUsuarioSesionId()
+    {
+        string? claimId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (int.TryParse(claimId, out int id))
+        {
+            return id;
+        }
+        return 1;
+    }
+
+    public class ItemAsignacionCeldaDto
+    {
+        public int CeldaId { get; set; }
+        public int ParteId { get; set; }
+        public int CantidadPiezas { get; set; }
+    }
+
     public class ProgramacionMasivaDto
     {
-        public List<int> CeldaIds { get; set; } = new();
+        public List<ItemAsignacionCeldaDto> Asignaciones { get; set; } = new();
         public List<DateTime> Fechas { get; set; } = new();
         public int TurnoId { get; set; }
-        public int ParteId { get; set; }
         public decimal HorasNetas { get; set; }
-        public decimal JphPlaneado { get; set; }
-        public int LotePlaneado { get; set; }
         public string? RazonCambio { get; set; }
     }
-
-    [HttpPost]
-    public async Task<IActionResult> GuardarProgramacionMasiva([FromBody] ProgramacionMasivaDto dto)
-    {
-        if (dto == null || !dto.CeldaIds.Any() || !dto.Fechas.Any() || dto.TurnoId <= 0)
-        {
-            return BadRequest(new { success = false, message = "Debe seleccionar al menos una celda, una fecha y un turno válido." });
-        }
-
-        int registrosProcesados = 0;
-
-        try
-        {
-            var strategy = _context.Database.CreateExecutionStrategy();
-
-            await strategy.ExecuteAsync(async () =>
-            {
-                foreach (var celdaId in dto.CeldaIds)
-                {
-                    foreach (var fecha in dto.Fechas)
-                    {
-                        var model = new ProgramacionFormViewModel
-                        {
-                            CeldaId = celdaId,
-                            FechaProduccion = fecha.Date,
-                            TurnoId = dto.TurnoId,
-                            NumeroParteId = dto.ParteId,
-                            TiempoEstimadoHoras = (double)dto.HorasNetas,
-                            CantidadProgramada = dto.LotePlaneado, // <-- Asigna la cantidad escrita
-                            RazonObligatoria = dto.RazonCambio ?? "Programación masiva en lote"
-                        };
-
-                        await _service.GuardarProgramacionAsync(model, usuarioId: 1);
-                        registrosProcesados++;
-                    }
-                }
-            });
-
-            return Json(new
-            {
-                success = true,
-                message = $"Programación procesada con éxito ({registrosProcesados} turnos asignados)."
-            });
-        }
-        catch (Exception ex)
-        {
-            string detalle = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
-            return StatusCode(500, new { success = false, message = $"Error al procesar la programación: {detalle}" });
-        }
-    }
-
 }

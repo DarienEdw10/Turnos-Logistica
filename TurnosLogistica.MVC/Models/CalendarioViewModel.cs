@@ -32,7 +32,8 @@ public class EventoCalendarioDto
     public string CeldaCodigo { get; set; } = string.Empty;
     public string SapPartNumber { get; set; } = string.Empty;
     public string TurnoClave { get; set; } = "T1";
-    public string Estado { get; set; } = "pendiente";
+    public string Estado { get; set; } = "PENDIENTE";
+    public string EstadoCss { get; set; } = "pendiente";
     public double Horas { get; set; } = 8.0;
     public int Cantidad { get; set; } = 0; // <--- Agrega esta propiedad
 }
