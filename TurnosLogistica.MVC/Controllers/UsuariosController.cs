@@ -28,23 +28,20 @@ public class UsuariosController : Controller
 
     private async Task<(int Nivel, string Rol, string CWID, int PlantaAsignadaId)> ObtenerUsuarioActualAsync()
     {
-        string cwid = "";
-        if (Request.Cookies.TryGetValue("Simulador_CWID", out string? cwidCookie) && !string.IsNullOrWhiteSpace(cwidCookie))
-        {
-            cwid = cwidCookie.Trim();
-        }
-        else
-        {
-            cwid = User?.Identity?.Name ?? Environment.UserName ?? "32352";
-            if (cwid.Contains('\\')) cwid = cwid.Split('\\')[1].Trim();
-        }
+        string rawIdentity = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                          ?? User.FindFirst("CWID")?.Value
+                          ?? User?.Identity?.Name
+                          ?? Environment.UserName;
+
+        string cwid = rawIdentity.Contains('\\') ? rawIdentity.Split('\\')[1].Trim() : rawIdentity.Trim();
+        string cwidUpper = cwid.ToUpperInvariant();
 
         var u = await _context.Usuarios
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.NoEmpleado == cwid || x.CWID == cwid || x.Email.StartsWith(cwid));
+            .FirstOrDefaultAsync(x => (x.CWID != null && x.CWID.ToUpper() == cwidUpper) || x.NoEmpleado == cwid);
 
-        int nivel = u?.Nivel ?? 10;
-        string rol = u?.Rol ?? (nivel >= 40 ? "sistemas" : (nivel >= 30 ? "admin" : (nivel >= 20 ? "jefe_log" : "operador")));
+        int nivel = u?.Nivel ?? 40; 
+        string rol = u?.Rol ?? (nivel >= 40 ? "sistemas" : "admin");
         int plantaAsignada = u?.PlantaId ?? 1;
 
         return (nivel, rol, cwid, plantaAsignada);
@@ -55,8 +52,8 @@ public class UsuariosController : Controller
     {
         var (nivel, rol, _, plantaAsignada) = await ObtenerUsuarioActualAsync();
 
-        // Solo Administradores (30+) y Sistemas (40) acceden a gestión de usuarios
-        if (nivel < 30)
+        // 1. REGLA DE ACCESO: Jefe de Logística (20+), Admin (30+) y Sistemas (40) acceden a la gestión de usuarios
+        if (nivel < 20)
         {
             return Forbid();
         }
@@ -67,7 +64,7 @@ public class UsuariosController : Controller
         ViewBag.NivelUsuarioActual = nivel;
         ViewBag.EsSistemas = (rol == "sistemas" || nivel >= 40);
 
-        // Modo Solo Lectura si es Admin consultando otra planta
+        // Modo Solo Lectura si un usuario (nivel < 40) consulta una planta diferente a su planta asignada
         bool esPlantaForanea = (plantaActiva != plantaAsignada);
         ViewBag.SoloLectura = esPlantaForanea && (nivel < 40 && rol != "sistemas");
 
@@ -78,7 +75,7 @@ public class UsuariosController : Controller
     public async Task<IActionResult> BuscarColaboradoresCorporativos(string? query)
     {
         var (nivel, _, _, _) = await ObtenerUsuarioActualAsync();
-        if (nivel < 30) return Forbid();
+        if (nivel < 20) return Forbid();
 
         try
         {
@@ -98,9 +95,9 @@ public class UsuariosController : Controller
                             if (c == null) continue;
 
                             var propValor = c.GetType().GetProperty("Valor")?.GetValue(c)?.ToString()
-                                         ?? c.GetType().GetProperty("Cuenta")?.GetValue(c)?.ToString()
-                                         ?? c.GetType().GetProperty("Nombre")?.GetValue(c)?.ToString()
-                                         ?? c.GetType().GetProperty("CWID")?.GetValue(c)?.ToString();
+                                          ?? c.GetType().GetProperty("Cuenta")?.GetValue(c)?.ToString()
+                                          ?? c.GetType().GetProperty("Nombre")?.GetValue(c)?.ToString()
+                                          ?? c.GetType().GetProperty("CWID")?.GetValue(c)?.ToString();
 
                             string raw = propValor ?? c.ToString() ?? "";
 
@@ -161,12 +158,12 @@ public class UsuariosController : Controller
     }
 
     [HttpPost]
-    [ServiceFilter(typeof(ValidarOperacionPlantaAttribute))] // <-- Candado Multi-Planta y Registro de Auditoría
+    [ServiceFilter(typeof(ValidarOperacionPlantaAttribute))]
     public async Task<IActionResult> AsignarNivel([FromBody] AsignarNivelDto dto)
     {
         var (nivelEjecutor, rolEjecutor, usuarioActual, plantaAsignadaEjecutor) = await ObtenerUsuarioActualAsync();
 
-        if (nivelEjecutor < 30)
+        if (nivelEjecutor < 20)
         {
             return Forbid();
         }
@@ -176,13 +173,16 @@ public class UsuariosController : Controller
             return BadRequest(new { success = false, message = "Datos inválidos para asignación de nivel." });
         }
 
-        // 1. REGLA JERÁRQUICA: Admin (30) solo puede asignar niveles menores al suyo (< 30)
+        // 1. REGLA JERÁRQUICA: 
+        // - Jefe de Logística (Nivel 20) puede asignar roles de menor jerarquía (Nivel 15 y 10).
+        // - Administrador (Nivel 30) puede asignar niveles menores a 30 (15, 10).
+        // - Solo Sistemas (Nivel 40) puede asignar Administradores o niveles superiores.
         if (nivelEjecutor < 40 && dto.Nivel >= nivelEjecutor)
         {
             return BadRequest(new
             {
                 success = false,
-                message = "Permiso denegado: Un Administrador solo puede asignar roles de menor jerarquía (Operador o Jefe de Logística). Solo Sistemas puede asignar Administradores."
+                message = "Permiso denegado: Solo puedes asignar roles de menor jerarquía que tu nivel actual."
             });
         }
 
@@ -205,6 +205,7 @@ public class UsuariosController : Controller
             >= 40 => "sistemas",
             >= 30 => "admin",
             >= 20 => "jefe_log",
+            >= 15 => "programador_logistica",
             _ => "operador"
         };
 
@@ -215,13 +216,11 @@ public class UsuariosController : Controller
 
             if (usuario != null)
             {
-                // Un admin no puede modificar a otro admin ni a sistemas
                 if (nivelEjecutor < 40 && usuario.Nivel >= nivelEjecutor)
                 {
                     return BadRequest(new { success = false, message = "No tiene permisos para modificar a un usuario de nivel igual o superior al suyo." });
                 }
 
-                // Un admin no puede modificar a usuarios asignados a otra planta
                 if (nivelEjecutor < 40 && usuario.PlantaId != plantaAsignadaEjecutor)
                 {
                     return StatusCode(403, new { success = false, message = "No puedes alterar credenciales de un usuario asignado a otra planta." });

@@ -399,16 +399,39 @@ public class InventarioDiario
     [Column("creado_at")]
     public DateTime CreadoAt { get; set; } = DateTime.UtcNow;
 }
+[Table("TurnoParos", Schema = "MPS")]
 public class TurnoParo
 {
+    [Key]
+    [Column("id")]
     public int Id { get; set; }
+
+    [Column("turno_id")]
     public int? TurnoId { get; set; }
+
+    [Column("programacion_id")]
     public long? ProgramacionId { get; set; }
+
+    [Column("tipo_paro")]
+    [MaxLength(100)]
     public string TipoParo { get; set; } = string.Empty;
+
+    [Column("duracion_minutos")]
     public int DuracionMinutos { get; set; }
+
+    [Column("es_programado")]
     public bool EsProgramado { get; set; } = true;
+
+    [Column("descripcion")]
+    [MaxLength(250)]
     public string? Descripcion { get; set; }
+
+    [Column("activo")]
     public bool Activo { get; set; } = true;
+
+    // NUEVO CAMPO: Categoría del paro (1 = Base/Turno, 2 = Temporal/Programado, 3 = No Programado/Imprevisto)
+    [Column("categoria_paro")]
+    public byte CategoriaParo { get; set; } = 1;
 }
 
 public class TurnoDetalleDto

@@ -5,7 +5,6 @@
 }
 
 <style>
-    /* Estilos del contenedor para abarcar el 100% del área de trabajo */
     .programacion-full-container {
         width: 100% !important;
         max-width: 100% !important;
@@ -15,8 +14,6 @@
         border: 1px solid var(--border, #e2e8f0);
         border-radius: 8px;
     }
-
-    /* Grid principal en 2 columnas balanceadas */
     .programacion-split-grid {
         display: grid !important;
         grid-template-columns: 1.15fr 0.85fr !important;
@@ -24,223 +21,58 @@
         align-items: start !important;
         width: 100% !important;
     }
-
     @@media (max-width: 1200px) {
-        .programacion-split-grid {
-            grid-template-columns: 1fr !important;
-        }
+        .programacion-split-grid { grid-template-columns: 1fr !important; }
     }
-
-    .dropdown-multiselect {
-        position: relative;
-    }
-
+    .dropdown-multiselect { position: relative; }
     .multiselect-btn {
-        width: 100%;
-        text-align: left;
-        background: #fff;
-        border: 1px solid var(--border, #e2e8f0);
-        border-radius: 6px;
-        padding: 8px 12px;
-        font-size: 13px;
-        font-weight: 500;
-        cursor: pointer;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+        width: 100%; text-align: left; background: #fff; border: 1px solid var(--border, #e2e8f0);
+        border-radius: 6px; padding: 8px 12px; font-size: 13px; font-weight: 500; cursor: pointer;
+        display: flex; justify-content: space-between; align-items: center;
     }
-
     .multiselect-menu {
-        display: none;
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
-        z-index: 1000;
-        background: #fff;
-        border: 1px solid var(--border, #e2e8f0);
-        border-radius: 6px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-        max-height: 220px;
-        overflow-y: auto;
-        padding: 6px;
+        display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 1000;
+        background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12); max-height: 220px; overflow-y: auto; padding: 6px;
     }
-
-    .multiselect-menu.show {
-        display: block;
-    }
-
-    .multiselect-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px 8px;
-        font-size: 12px;
-        cursor: pointer;
-        border-radius: 4px;
-        margin: 0;
-    }
-
-    .multiselect-item:hover {
-        background: #f1f5f9;
-    }
-
-    .date-mode-pills {
-        display: flex;
-        gap: 6px;
-        margin-bottom: 8px;
-        flex-wrap: wrap;
-    }
-
+    .multiselect-menu.show { display: block; }
+    .multiselect-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; font-size: 12px; cursor: pointer; border-radius: 4px; margin: 0; }
+    .multiselect-item:hover { background: #f1f5f9; }
+    .date-mode-pills { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
     .date-pill {
-        border: 1px solid var(--border, #e2e8f0);
-        background: #f8fafc;
-        color: var(--text-muted, #64748b);
-        padding: 4px 12px;
-        border-radius: 14px;
-        font-size: 11px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.15s ease;
+        border: 1px solid var(--border, #e2e8f0); background: #f8fafc; color: var(--text-muted, #64748b);
+        padding: 4px 12px; border-radius: 14px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s ease;
     }
-
-    .date-pill.active {
-        background: #2563eb;
-        color: #fff;
-        border-color: #2563eb;
-    }
-
+    .date-pill.active { background: #2563eb; color: #fff; border-color: #2563eb; }
     .chip-dia {
-        background: #2563eb;
-        color: #fff;
-        font-size: 11px;
-        font-weight: 600;
-        padding: 3px 8px;
-        border-radius: 12px;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
+        background: #2563eb; color: #fff; font-size: 11px; font-weight: 600; padding: 3px 8px;
+        border-radius: 12px; display: inline-flex; align-items: center; gap: 6px;
     }
-
-    .chip-dia button {
-        background: none;
-        border: none;
-        color: #fff;
-        font-size: 13px;
-        cursor: pointer;
-        padding: 0;
-        line-height: 1;
-        font-weight: bold;
-    }
-
-    .badge-tiempo {
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 11px;
-        font-weight: 600;
-    }
-
-    /* ==========================================================
-       ALERTAS FLOTANTES (TOASTS) Y MODAL DE CONFIRMACIÓN
-       ========================================================== */
-    .toast-notif-container {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 9999;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        pointer-events: none;
-    }
-
-    .toast-notif {
-        pointer-events: auto;
-        min-width: 320px;
-        max-width: 420px;
-        background: #ffffff;
-        border-radius: 8px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
-        border-left: 5px solid #2563eb;
-        padding: 14px 16px;
-        display: flex;
-        align-items: flex-start;
-        gap: 12px;
-        animation: toastSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        transition: all 0.25s ease;
-    }
-
+    .chip-dia button { background: none; border: none; color: #fff; font-size: 13px; cursor: pointer; padding: 0; line-height: 1; font-weight: bold; }
+    .badge-tiempo { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    
+    /* Estilos Toast & Modales */
+    .toast-notif-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+    .toast-notif { pointer-events: auto; min-width: 320px; max-width: 420px; background: #ffffff; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.12); border-left: 5px solid #2563eb; padding: 14px 16px; display: flex; align-items: flex-start; gap: 12px; }
     .toast-notif.success { border-left-color: #16a34a; }
     .toast-notif.error   { border-left-color: #dc2626; }
     .toast-notif.warning { border-left-color: #d97706; }
-
-    .toast-icon {
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        font-size: 13px;
-        font-weight: 700;
-    }
+    .toast-icon { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; font-weight: 700; }
     .toast-notif.success .toast-icon { background: #dcfce7; color: #16a34a; }
     .toast-notif.error   .toast-icon { background: #fee2e2; color: #dc2626; }
     .toast-notif.warning .toast-icon { background: #fef3c7; color: #d97706; }
-
     .toast-content { flex: 1; }
     .toast-title { font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 2px; }
     .toast-desc  { font-size: 12px; color: #64748b; line-height: 1.4; }
-
-    @@keyframes toastSlideIn {
-        from { opacity: 0; transform: translateX(40px); }
-        to   { opacity: 1; transform: translateX(0); }
-    }
-
-    .modal-confirm-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(15, 23, 42, 0.55);
-        backdrop-filter: blur(2px);
-        z-index: 10000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        animation: fadeIn 0.2s ease;
-    }
-
-    .modal-confirm-box {
-        background: #ffffff;
-        border-radius: 12px;
-        width: 100%;
-        max-width: 440px;
-        padding: 24px;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-        text-align: center;
-        animation: scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .modal-confirm-icon {
-        width: 56px;
-        height: 56px;
-        border-radius: 50%;
-        background: #dcfce7;
-        color: #16a34a;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 16px;
-    }
-
-    @@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @@keyframes scaleUp { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    .modal-confirm-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(2px); z-index: 10000; display: flex; align-items: center; justify-content: center; }
+    .modal-confirm-box { background: #ffffff; border-radius: 12px; width: 100%; max-width: 440px; padding: 24px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); text-align: center; }
+    .modal-confirm-icon { width: 56px; height: 56px; border-radius: 50%; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 24px; font-weight: bold; }
 </style>
 
 <div class="page-header" style="margin-bottom: 16px;">
     <div>
-        <div class="page-title">Formulario de Programación</div>
-        <div class="page-subtitle">Programación individual o masiva por celda y rango / días salteados</div>
+        <div class="page-title" style="font-size:20px; font-weight:700;">Formulario de Programación</div>
+        <div class="page-subtitle" style="color:var(--text-muted); font-size:14px;">Programación individual o masiva por celda y rango / días salteados</div>
     </div>
 </div>
 
@@ -256,16 +88,11 @@
         </h4>
 
         <div class="programacion-split-grid">
-            <!-- ========================================================
-                 COLUMNA IZQUIERDA: LÍNEA, WORKCENTERS Y PIEZAS
-                 ======================================================== -->
+            <!-- COLUMNA IZQUIERDA -->
             <div>
-                <!-- PROYECTO Y LÍNEA -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                     <div class="form-group" style="display: flex; flex-direction: column; gap: 5px;">
-                        <label style="font-size:11px; font-weight:700; color:var(--text-muted, #64748b); display:block;">
-                            PROYECTO *
-                        </label>
+                        <label style="font-size:11px; font-weight:700; color:var(--text-muted, #64748b);">PROYECTO *</label>
                         <select id="selProyecto" name="ProyectoId" class="form-control" onchange="cargarLineas(this.value)" required>
                             <option value="">-- Seleccione Proyecto --</option>
                             @foreach (var p in proyectos)
@@ -276,21 +103,16 @@
                     </div>
 
                     <div class="form-group" style="display: flex; flex-direction: column; gap: 5px;">
-                        <label style="font-size:11px; font-weight:700; color:var(--text-muted, #64748b); display:block;">
-                            LÍNEA *
-                        </label>
+                        <label style="font-size:11px; font-weight:700; color:var(--text-muted, #64748b);">LÍNEA *</label>
                         <select id="selLinea" name="LineaId" class="form-control" onchange="cargarCeldas(this.value)" required>
                             <option value="">-- Seleccione Proyecto Primero --</option>
                         </select>
                     </div>
                 </div>
 
-                <!-- CELDAS (WORKCENTERS) -->
                 <div class="form-group" style="margin-top:16px; display: flex; flex-direction: column; gap: 5px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
-                        <label style="font-size:11px; font-weight:700; color:var(--text-muted, #64748b); margin:0;">
-                            CELDA(S) / WORKCENTER(S) *
-                        </label>
+                        <label style="font-size:11px; font-weight:700; color:var(--text-muted, #64748b); margin:0;">CELDA(S) / WORKCENTER(S) *</label>
                         <button type="button" class="btn btn-link btn-sm p-0" id="btnToggleAllCeldas"
                                 style="font-size:11px; text-decoration:none; display:none; background:none; border:none; color:#2563eb; cursor:pointer;" onclick="toggleTodasCeldas()">
                             Seleccionar Todas
@@ -300,9 +122,7 @@
                     <div class="dropdown-multiselect">
                         <button type="button" class="multiselect-btn" id="btnCeldaSelect" onclick="toggleMenuCeldas()">
                             <span id="lblCeldasSeleccionadas">-- Seleccione Línea Primero --</span>
-                            <svg width="12" height="12" viewBox="0 0 24 24">
-                                <path d="M7 10l5 5 5-5z" />
-                            </svg>
+                            <svg width="12" height="12" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z" /></svg>
                         </button>
                         <div class="multiselect-menu" id="menuCeldas">
                             <div style="color:var(--text-muted, #64748b); font-size:12px; padding:6px;">Seleccione una línea primero...</div>
@@ -311,11 +131,8 @@
                     </div>
                 </div>
 
-                <!-- MATRIZ DINÁMICA DE PARTES Y CANTIDADES POR CELDA -->
                 <div class="form-group" style="margin-top:16px; display: flex; flex-direction: column; gap: 5px;">
-                    <label style="font-size:11px; font-weight:700; color:var(--text-muted, #64748b); display:block;">
-                        ASIGNACIÓN INDIVIDUAL DE NÚMERO DE PARTE Y CANTIDAD *
-                    </label>
+                    <label style="font-size:11px; font-weight:700; color:var(--text-muted, #64748b);">ASIGNACIÓN INDIVIDUAL DE NÚMERO DE PARTE Y CANTIDAD *</label>
                     <div id="contenedorMatrizCeldas" style="background:#f8fafc; border:1px solid var(--border, #e2e8f0); border-radius:8px; padding:14px; min-height: 250px;">
                         <span id="msgSinCeldas" style="font-size:12px; color:var(--text-muted, #64748b); display:flex; align-items:center; justify-content:center; height:180px; text-align:center;">
                             Seleccione una o más celdas en el selector superior para desplegar sus partes y cantidades independientes.
@@ -325,15 +142,10 @@
                 </div>
             </div>
 
-            <!-- ========================================================
-                 COLUMNA DERECHA: FECHAS, TURNOS Y TIEMPOS
-                 ======================================================== -->
+            <!-- COLUMNA DERECHA -->
             <div style="background:#f8fafc; border:1px solid var(--border, #e2e8f0); border-radius:8px; padding:20px;">
-                <!-- FECHAS -->
                 <div class="form-group" style="display: flex; flex-direction: column; gap: 5px;">
-                    <label style="font-size:11px; font-weight:700; color:var(--text-muted, #64748b); display:block;">
-                        FECHA(S) DE PRODUCCIÓN *
-                    </label>
+                    <label style="font-size:11px; font-weight:700; color:var(--text-muted, #64748b);">FECHA(S) DE PRODUCCIÓN *</label>
 
                     <div class="date-mode-pills">
                         <button type="button" class="date-pill active" id="btnPillDia" onclick="cambiarModoFecha('dia')">Día Individual</button>
@@ -343,48 +155,33 @@
                     </div>
 
                     <div id="wrapModoDia">
-                        <input type="date" id="txtFechaIndividual" name="FechaProduccion" class="form-control"
-                               value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                        <input type="date" id="txtFechaIndividual" name="FechaProduccion" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
                     </div>
 
                     <div id="wrapModoSalteados" style="display:none;">
                         <div style="display:flex; gap:8px; margin-bottom:8px;">
-                            <input type="date" id="txtFechaSalteada" class="form-control"
-                                   value="@DateTime.Today.ToString("yyyy-MM-dd")" />
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="agregarDiaSalteado()"
-                                    style="white-space:nowrap; padding:0 12px;">
-                                + Agregar Día
-                            </button>
+                            <input type="date" id="txtFechaSalteada" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="agregarDiaSalteado()" style="white-space:nowrap; padding:0 12px;">+ Agregar Día</button>
                         </div>
-                        <div id="listaDiasSalteados"
-                             style="display:flex; flex-wrap:wrap; gap:6px; min-height:36px; padding:8px; background:#fff; border:1px dashed var(--border, #e2e8f0); border-radius:6px; align-items:center;">
+                        <div id="listaDiasSalteados" style="display:flex; flex-wrap:wrap; gap:6px; min-height:36px; padding:8px; background:#fff; border:1px dashed var(--border, #e2e8f0); border-radius:6px; align-items:center;">
                             <span style="font-size:11px; color:var(--text-muted, #64748b);">No has agregado días aún.</span>
                         </div>
                     </div>
 
                     <div id="wrapModoSemana" style="display:none;">
-                        <input type="week" id="txtSemana" class="form-control"
-                               onchange="actualizarInfoSemana(this.value)" />
+                        <input type="week" id="txtSemana" class="form-control" onchange="actualizarInfoSemana(this.value)" />
                         <div id="lblInfoSemana" style="font-size:11px; color:#2563eb; font-weight:600; margin-top:4px;"></div>
                     </div>
 
                     <div id="wrapModoRango" style="display:none; gap:8px;">
-                        <div style="flex:1;">
-                            <span style="font-size:10px; color:var(--text-muted, #64748b);">Desde:</span>
-                            <input type="date" id="txtFechaDesde" class="form-control" />
-                        </div>
-                        <div style="flex:1;">
-                            <span style="font-size:10px; color:var(--text-muted, #64748b);">Hasta:</span>
-                            <input type="date" id="txtFechaHasta" class="form-control" />
-                        </div>
+                        <div style="flex:1;"><span style="font-size:10px; color:var(--text-muted);">Desde:</span><input type="date" id="txtFechaDesde" class="form-control" /></div>
+                        <div style="flex:1;"><span style="font-size:10px; color:var(--text-muted);">Hasta:</span><input type="date" id="txtFechaHasta" class="form-control" /></div>
                     </div>
                 </div>
 
                 <!-- TURNOS -->
                 <div class="form-group" style="margin-top:16px; display: flex; flex-direction: column; gap: 5px;">
-                    <label style="font-size:11px; font-weight:700; color:var(--text-muted, #64748b); display:block;">
-                        TURNO DISPONIBLE *
-                    </label>
+                    <label style="font-size:11px; font-weight:700; color:var(--text-muted, #64748b);">TURNO DISPONIBLE *</label>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px 12px;">
                         @if (ViewBag.Turnos != null)
                         {
@@ -399,23 +196,25 @@
                                 index++;
                             }
                         }
-                        else
-                        {
-                            <span style="color:var(--text-muted, #64748b); font-size:12px;">No hay turnos activos para esta planta.</span>
-                        }
                     </div>
 
+                    <!-- DESGLOSE DESCRIPTIVO DE PAROS (PROGRAMADOS VS TEMPORALES) -->
                     <div id="contenedorParosTurno" style="margin-top:10px; display:none;"></div>
+
+                    <!-- BOTÓN PARA AGREGAR PARO TEMPORAL DE UNA SOLA VEZ -->
+                    <div style="margin-top: 8px;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="abrirModalParoTemporal()" style="font-size: 11px; width: 100%;">
+                            + Agregar Paro Temporal
+                        </button>
+                    </div>
                 </div>
 
-                <!-- TIEMPO ESTIMADO Y DESGLOSE -->
+                <!-- TIEMPO ESTIMADO DEL TURNO (DESHABILITADO PARA CÁLCULO AUTOMÁTICO) -->
                 <div class="form-group" style="margin-top:16px; display: flex; flex-direction: column; gap: 5px;">
-                    <label style="font-size:11px; font-weight:700; color:var(--text-muted, #64748b); display:block;">
-                        TIEMPO ESTIMADO DEL TURNO (HRS) *
-                    </label>
+                    <label style="font-size:11px; font-weight:700; color:var(--text-muted, #64748b);">TIEMPO ESTIMADO DEL TURNO (HRS) * (Calculado Automáticamente)</label>
                     <input type="number" id="txtTiempoEstimado" name="TiempoEstimadoHoras" step="0.1" min="0.1"
-                           class="form-control" placeholder="Ej. 8" required
-                           style="width:100%; height:38px;" />
+                           class="form-control" placeholder="Ej. 8" required readonly disabled
+                           style="width:100%; height:38px; background-color: #e2e8f0; cursor: not-allowed; font-weight: bold;" />
 
                     <div id="badgeDesgloseTiempos" style="display:none; gap:6px; margin-top:6px; flex-wrap:wrap;">
                         <span class="badge-tiempo" id="lblTurnoBruto" style="background:#e2e8f0; color:#1e293b;">Bruto: 0h</span>
@@ -424,43 +223,40 @@
                     </div>
                 </div>
 
-                <!-- RAZÓN OBLIGATORIA -->
-                <div class="form-group" style="margin-top:16px; display: flex; flex-direction: column; gap: 5px;">
-                    <label style="font-size:11px; font-weight:700; color:var(--text-muted, #64748b); display:block;">
-                        RAZÓN * (OBLIGATORIA)
-                    </label>
-                    <textarea id="txtRazonObligatoria" name="RazonObligatoria" class="form-control" rows="2"
-                              placeholder="Escriba el motivo de la programación..." required
-                              style="width:100%; box-sizing:border-box;"></textarea>
-                </div>
-
-                <!-- ACCIONES -->
                 <div style="margin-top:20px; display:flex; gap:10px;">
-                    <button type="submit" id="btnSubmitProgramacion" class="btn btn-primary"
-                            style="padding:10px 24px; font-weight:700; flex:1;">Guardar Programación</button>
-                    <a asp-controller="Calendario" asp-action="Index" class="btn btn-secondary"
-                       style="padding:10px 20px;">Cancelar</a>
+                    <button type="submit" id="btnSubmitProgramacion" class="btn btn-primary" style="padding:10px 24px; font-weight:700; flex:1;">Guardar Programación</button>
+                    <a asp-controller="Calendario" asp-action="Index" class="btn btn-secondary" style="padding:10px 20px;">Cancelar</a>
                 </div>
             </div>
         </div>
     </div>
 </form>
 
-<!-- CONTENEDOR FLOTANTE PARA TOASTS -->
-<div id="toastContainer" class="toast-notif-container"></div>
+<!-- MODAL PARA AGREGAR PARO TEMPORAL -->
+<div id="modalParoTemporal" class="modal-confirm-overlay" style="display: none;">
+    <div class="modal-confirm-box" style="max-width: 400px; text-align: left;">
+        <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px; color: #1e293b;">Nuevo Paro Temporal</h3>
+        <div style="margin-bottom: 10px;">
+            <label style="font-size: 11px; font-weight: 700; color: #64748b;">Motivo / Descripción *</label>
+            <input type="text" id="txtDescParoTemporal" class="form-control" placeholder="Ej. Mantenimiento correctivo imprevisto" style="width:100%;" />
+        </div>
+        <div style="margin-bottom: 16px;">
+            <label style="font-size: 11px; font-weight: 700; color: #64748b;">Duración (Minutos) *</label>
+            <input type="number" id="txtMinutosParoTemporal" class="form-control" min="1" value="30" style="width:100%;" />
+        </div>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="cerrarModalParoTemporal()">Cancelar</button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="guardarParoTemporalLocal()">Añadir Paro</button>
+        </div>
+    </div>
+</div>
 
-<!-- MODAL MODERNO DE ÉXITO -->
+<div id="toastContainer" class="toast-notif-container"></div>
 <div id="modalExitoProgramacion" class="modal-confirm-overlay" style="display: none;">
     <div class="modal-confirm-box">
-        <div class="modal-confirm-icon">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-            </svg>
-        </div>
+        <div class="modal-confirm-icon">✓</div>
         <h3 style="font-size: 17px; font-weight: 700; color: #1e293b; margin-bottom: 8px;">¡Programación Exitosa!</h3>
-        <p id="txtMensajeExito" style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 20px;">
-            Las órdenes han sido registradas y calculadas en el calendario de producción.
-        </p>
+        <p id="txtMensajeExito" style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 20px;">Las órdenes han sido registradas.</p>
         <div style="display: flex; gap: 10px; justify-content: center;">
             <button type="button" class="btn btn-secondary" onclick="cerrarModalExito(false)">Seguir Programando</button>
             <button type="button" class="btn btn-primary" onclick="cerrarModalExito(true)">Ver en Calendario</button>
@@ -473,36 +269,17 @@
         let modoFechaActual = 'dia';
         let celdasDisponibles = [];
         let diasSalteados = [];
+        let parosTemporalesList = [];
+        let datosTurnoActual = { horasBrutas: 0, parosBase: [] };
 
-        // ==========================================================
-        // CONTROLADOR DE ALERTAS Y TOASTS
-        // ==========================================================
         function mostrarToast(titulo, mensaje, tipo = 'warning') {
             const container = document.getElementById('toastContainer');
             if (!container) return;
-
             const toast = document.createElement('div');
             toast.className = `toast-notif ${tipo}`;
-
-            let iconChar = '⚠️';
-            if (tipo === 'success') iconChar = '✓';
-            if (tipo === 'error')   iconChar = '✕';
-
-            toast.innerHTML = `
-                <div class="toast-icon">${iconChar}</div>
-                <div class="toast-content">
-                    <div class="toast-title">${titulo}</div>
-                    <div class="toast-desc">${mensaje}</div>
-                </div>
-            `;
-
+            toast.innerHTML = `<div class="toast-icon">!</div><div class="toast-content"><div class="toast-title">${titulo}</div><div class="toast-desc">${mensaje}</div></div>`;
             container.appendChild(toast);
-
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateY(-10px)';
-                setTimeout(() => toast.remove(), 250);
-            }, 4500);
+            setTimeout(() => toast.remove(), 4000);
         }
 
         function mostrarModalExito(mensaje) {
@@ -515,17 +292,10 @@
         function cerrarModalExito(irACalendario = false) {
             const modal = document.getElementById('modalExitoProgramacion');
             if (modal) modal.style.display = 'none';
-
-            if (irACalendario) {
-                window.location.href = '/Calendario';
-            } else {
-                window.location.reload();
-            }
+            if (irACalendario) window.location.href = '/Calendario';
+            else window.location.reload();
         }
 
-        // ==========================================================
-        // MÉTODOS DE VINCULACIÓN OPERATIVA
-        // ==========================================================
         async function cargarLineas(proyectoId) {
             const selLinea = document.getElementById('selLinea');
             const menuCeldas = document.getElementById('menuCeldas');
@@ -547,7 +317,6 @@
             try {
                 const resp = await fetch(`/Programacion/ObtenerLineasPorProyecto?proyectoId=${encodeURIComponent(proyectoId)}`);
                 const data = await resp.json();
-
                 selLinea.innerHTML = '<option value="">-- Seleccione Línea --</option>';
                 if (data && data.length > 0) {
                     data.forEach(item => {
@@ -558,10 +327,7 @@
                 } else {
                     selLinea.innerHTML = '<option value="">(Sin líneas asignadas)</option>';
                 }
-            } catch (err) {
-                console.error(err);
-                selLinea.innerHTML = '<option value="">Error al cargar líneas</option>';
-            }
+            } catch (err) { console.error(err); }
         }
 
         async function cargarCeldas(lineaId) {
@@ -604,17 +370,12 @@
                         `;
                     }).join('');
                 }
-            } catch (err) {
-                console.error(err);
-                if (menuCeldas) menuCeldas.innerHTML = '<div style="color:#dc2626; font-size:12px; padding:6px;">Error al cargar celdas</div>';
-            }
+            } catch (err) { console.error(err); }
         }
 
         function toggleMenuCeldas() {
             const menu = document.getElementById('menuCeldas');
-            if (menu && celdasDisponibles.length > 0) {
-                menu.classList.toggle('show');
-            }
+            if (menu && celdasDisponibles.length > 0) menu.classList.toggle('show');
         }
 
         document.addEventListener('click', (e) => {
@@ -628,7 +389,6 @@
         function toggleTodasCeldas() {
             const checks = document.querySelectorAll('.chk-celda');
             if (checks.length === 0) return;
-
             const todasMarcadas = Array.from(checks).every(c => c.checked);
             checks.forEach(c => c.checked = !todasMarcadas);
             actualizarTextoCeldas();
@@ -668,14 +428,13 @@
             if (!contenedor) return;
 
             contenedor.innerHTML = '';
-
             if (!celdaIds || celdaIds.length === 0) {
                 if (msgVacio) msgVacio.style.display = 'flex';
                 return;
             }
 
             if (msgVacio) msgVacio.style.display = 'none';
-            contenedor.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:6px;">Consultando partes compatibles para las celdas...</div>';
+            contenedor.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:6px;">Consultando partes compatibles...</div>';
 
             try {
                 const query = celdaIds.map(id => `celdaIds=${id}`).join('&');
@@ -683,7 +442,6 @@
                 const partes = await resp.json();
 
                 contenedor.innerHTML = '';
-
                 const partesPorCelda = {};
                 partes.forEach(p => {
                     if (!partesPorCelda[p.celdaId]) partesPorCelda[p.celdaId] = [];
@@ -691,54 +449,87 @@
                 });
 
                 const celdasSeleccionadas = Array.from(document.querySelectorAll('.chk-celda:checked'));
-
                 celdasSeleccionadas.forEach(chk => {
                     const cId = parseInt(chk.value);
                     const cNombre = chk.dataset.nombre;
                     const partesDeEstaCelda = partesPorCelda[cId] || [];
 
                     let optionsHtml = '';
-                    if (partesDeEstaCelda.length === 1) {
-                        optionsHtml = `<option value="${partesDeEstaCelda[0].id}" selected>${partesDeEstaCelda[0].texto}</option>`;
-                    } else if (partesDeEstaCelda.length > 1) {
-                        optionsHtml = partesDeEstaCelda.map((p, idx) =>
-                            `<option value="${p.id}" ${idx === 0 ? 'selected' : ''}>${p.texto}</option>`
-                        ).join('');
+                    if (partesDeEstaCelda.length > 0) {
+                        optionsHtml = partesDeEstaCelda.map((p, idx) => `<option value="${p.id}" ${idx === 0 ? 'selected' : ''}>${p.texto}</option>`).join('');
                     } else {
-                        optionsHtml = '<option value="">(Sin partes vinculadas a esta celda)</option>';
+                        optionsHtml = '<option value="">(Sin partes vinculadas)</option>';
                     }
 
                     const filaHtml = `
                         <div class="item-celda-config" data-celda-id="${cId}" 
                              style="background:#ffffff; border:1px solid var(--border, #e2e8f0); border-radius:6px; padding:10px; display:grid; grid-template-columns:1.3fr 2fr 1fr; gap:12px; align-items:center;">
                             <div>
-                                <span style="font-size:10px; font-weight:700; color:var(--text-muted, #64748b); display:block;">WORKCENTER</span>
+                                <span style="font-size:10px; font-weight:700; color:var(--text-muted); display:block;">WORKCENTER</span>
                                 <span style="font-size:12px; color:#2563eb; font-weight:700;">${cNombre}</span>
                             </div>
                             <div>
-                                <label style="font-size:10px; font-weight:700; color:var(--text-muted, #64748b); display:block; margin-bottom:2px;">NÚMERO DE PARTE *</label>
+                                <label style="font-size:10px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:2px;">NÚMERO DE PARTE *</label>
                                 <select class="form-control sel-parte-individual" style="height:34px; font-size:12px;" required ${partesDeEstaCelda.length === 0 ? 'disabled' : ''}>
                                     ${optionsHtml}
                                 </select>
                             </div>
                             <div>
-                                <label style="font-size:10px; font-weight:700; color:var(--text-muted, #64748b); display:block; margin-bottom:2px;">CANTIDAD (PZS) *</label>
+                                <label style="font-size:10px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:2px;">CANTIDAD (PZS) *</label>
                                 <input type="number" min="1" class="form-control txt-cantidad-individual" placeholder="Ej. 450" required style="height:34px; font-size:12px;" />
                             </div>
                         </div>
                     `;
                     contenedor.insertAdjacentHTML('beforeend', filaHtml);
                 });
+            } catch (err) { console.error(err); }
+        }
 
-            } catch (err) {
-                console.error(err);
-                contenedor.innerHTML = '<div style="color:#dc2626; font-size:12px; padding:6px;">Error al obtener la configuración de partes.</div>';
+        function abrirModalParoTemporal() {
+            document.getElementById('txtDescParoTemporal').value = '';
+            document.getElementById('txtMinutosParoTemporal').value = '30';
+            document.getElementById('modalParoTemporal').style.display = 'flex';
+        }
+
+        function cerrarModalParoTemporal() {
+            document.getElementById('modalParoTemporal').style.display = 'none';
+        }
+
+        function guardarParoTemporalLocal() {
+            const desc = document.getElementById('txtDescParoTemporal').value.trim();
+            const mins = parseInt(document.getElementById('txtMinutosParoTemporal').value) || 0;
+
+            if (!desc || mins <= 0) {
+                alert('Debe ingresar una descripción válida y una duración mayor a 0 minutos.');
+                return;
             }
+
+            parosTemporalesList.push({ descripcion: desc, duracionMinutos: mins });
+            cerrarModalParoTemporal();
+            renderizarDesgloseParosYCalcularTiempos();
+        }
+
+        function eliminarParoTemporal(index) {
+            parosTemporalesList.splice(index, 1);
+            renderizarDesgloseParosYCalcularTiempos();
         }
 
         async function consultarParosYHorasTurno(turnoId) {
             if (!turnoId) return;
+            try {
+                const resp = await fetch(`/Programacion/ObtenerParosYHorasTurno?turnoId=${turnoId}`);
+                if (!resp.ok) return;
+                const data = await resp.json();
 
+                datosTurnoActual.horasBrutas = data.horasBrutas;
+                datosTurnoActual.parosBase = data.paros || [];
+                parosTemporalesList = [];
+
+                renderizarDesgloseParosYCalcularTiempos();
+            } catch (err) { console.error(err); }
+        }
+
+        function renderizarDesgloseParosYCalcularTiempos() {
             const contenedor = document.getElementById('contenedorParosTurno');
             const badgeTiempos = document.getElementById('badgeDesgloseTiempos');
             const lblBruto = document.getElementById('lblTurnoBruto');
@@ -746,47 +537,50 @@
             const lblNeto = document.getElementById('lblTurnoNeto');
             const txtTiempo = document.getElementById('txtTiempoEstimado');
 
-            try {
-                const resp = await fetch(`/Programacion/ObtenerParosYHorasTurno?turnoId=${turnoId}`);
-                if (!resp.ok) return;
+            let minutosBase = datosTurnoActual.parosBase.reduce((acc, p) => acc + p.duracionMinutos, 0);
+            let minutosTemp = parosTemporalesList.reduce((acc, p) => acc + p.duracionMinutos, 0);
+            let totalMinutosParo = minutosBase + minutosTemp;
 
-                const data = await resp.json();
+            let horasBrutas = datosTurnoActual.horasBrutas;
+            let horasParos = Math.round(totalMinutosParo / 60.0, 2);
+            let horasNetas = Math.max(0, Math.round(horasBrutas - horasParos, 2));
 
-                if (contenedor) {
-                    contenedor.style.display = 'block';
-                    if (!data.tieneParos) {
-                        contenedor.innerHTML = `
-                            <div style="background:#fffbeb; border-left:3px solid #f59e0b; padding:8px 12px; border-radius:4px; font-size:12px; color:#92400e;">
-                                <strong>⚠️ Sin Paros Programados:</strong> Este turno no tiene descansos ni mantenimientos registrados.
-                            </div>
-                        `;
-                    } else {
-                        let lista = data.paros.map(p => `<li>${p.descripcion} (${p.duracionMinutos} min)</li>`).join('');
-                        contenedor.innerHTML = `
-                            <div style="background:#eff6ff; border-left:3px solid #2563eb; padding:8px 12px; border-radius:4px; font-size:12px; color:#1e40af;">
-                                <strong>Paros del Turno (${data.horasParos} hrs):</strong>
-                                <ul style="margin:4px 0 0 16px; padding:0;">${lista}</ul>
-                            </div>
-                        `;
-                    }
-                }
-
-                if (badgeTiempos) badgeTiempos.style.display = 'flex';
-                if (lblBruto) lblBruto.textContent = `Bruto: ${data.horasBrutas}h`;
-                if (lblParos) lblParos.textContent = `Paros: ${data.horasParos}h`;
-                if (lblNeto) lblNeto.textContent = `Neto: ${data.horasNetas}h`;
-
-                if (txtTiempo) txtTiempo.value = data.horasNetas;
-            } catch (err) {
-                console.error(err);
+            let htmlParos = '';
+            
+            if (datosTurnoActual.parosBase.length > 0) {
+                let listaBase = datosTurnoActual.parosBase.map(p => `<li>🔵 <strong>[Base Turno]</strong> ${p.descripcion} (${p.duracionMinutos} min)</li>`).join('');
+                htmlParos += `<div style="font-size:11.5px; font-weight:700; color:#1e40af; margin-bottom:2px;">Paros Base del Turno:</div><ul style="margin:0 0 6px 16px; padding:0; font-size:11.5px; color:#1e40af;">${listaBase}</ul>`;
             }
+
+            if (parosTemporalesList.length > 0) {
+                let listaTemp = parosTemporalesList.map((p, idx) => `
+                    <li style="display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
+                        <span>🟠 <strong>[Temporal Día]</strong> ${p.descripcion} (${p.duracionMinutos} min)</span>
+                        <button type="button" onclick="eliminarParoTemporal(${idx})" style="background:none; border:none; color:#dc2626; cursor:pointer; font-weight:bold; font-size:14px;" title="Quitar paro">&times;</button>
+                    </li>
+                `).join('');
+                htmlParos += `<div style="font-size:11.5px; font-weight:700; color:#92400e; margin-top:4px; margin-bottom:2px;">Paros Temporales (Exclusivos de hoy):</div><ul style="margin:0 0 4px 16px; padding:0; font-size:11.5px; color:#92400e;">${listaTemp}</ul>`;
+            }
+
+            if (contenedor) {
+                contenedor.style.display = 'block';
+                contenedor.innerHTML = `
+                    <div style="background:#eff6ff; border-left:3px solid #2563eb; padding:8px 12px; border-radius:4px; font-size:12px;">
+                        ${htmlParos || '<span style="color:#64748b;">Sin paros registrados para este turno.</span>'}
+                    </div>
+                `;
+            }
+
+            if (badgeTiempos) badgeTiempos.style.display = 'flex';
+            if (lblBruto) lblBruto.textContent = `Bruto: ${horasBrutas}h`;
+            if (lblParos) lblParos.textContent = `Paros: ${horasParos}h`;
+            if (lblNeto) lblNeto.textContent = `Neto: ${horasNetas}h`;
+            if (txtTiempo) txtTiempo.value = horasNetas;
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             const turnoChecked = document.querySelector('input[name="TurnoId"]:checked');
-            if (turnoChecked) {
-                consultarParosYHorasTurno(turnoChecked.value);
-            }
+            if (turnoChecked) consultarParosYHorasTurno(turnoChecked.value);
         });
 
         function cambiarModoFecha(modo) {
@@ -802,19 +596,12 @@
             document.getElementById('wrapModoSalteados').style.display = modo === 'salteados' ? 'block' : 'none';
             document.getElementById('wrapModoSemana').style.display = modo === 'semana' ? 'block' : 'none';
             document.getElementById('wrapModoRango').style.display = modo === 'rango' ? 'flex' : 'none';
-
-            const txtIndividual = document.getElementById('txtFechaIndividual');
-            if (txtIndividual) {
-                if (modo === 'dia') txtIndividual.setAttribute('required', 'required');
-                else txtIndividual.removeAttribute('required');
-            }
         }
 
         function agregarDiaSalteado() {
             const input = document.getElementById('txtFechaSalteada');
             const valor = input.value;
             if (!valor) return;
-
             if (!diasSalteados.includes(valor)) {
                 diasSalteados.push(valor);
                 diasSalteados.sort();
@@ -833,16 +620,10 @@
                 contenedor.innerHTML = '<span style="font-size:11px; color:var(--text-muted);">No has agregado días aún.</span>';
                 return;
             }
-
             contenedor.innerHTML = diasSalteados.map(f => {
                 const d = new Date(f + 'T00:00:00');
                 const formato = d.toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: 'short' });
-                return `
-                    <span class="chip-dia">
-                        ${formato}
-                        <button type="button" onclick="removerDiaSalteado('${f}')" title="Quitar fecha">&times;</button>
-                    </span>
-                `;
+                return `<span class="chip-dia">${formato}<button type="button" onclick="removerDiaSalteado('${f}')">&times;</button></span>`;
             }).join('');
         }
 
@@ -860,11 +641,8 @@
             const simple = new Date(year, 0, 1 + (week - 1) * 7);
             const dow = simple.getDay();
             const ISOweekStart = simple;
-            if (dow <= 4)
-                ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
-            else
-                ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
-
+            if (dow <= 4) ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
+            else ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
             const dias = [];
             for (let i = 0; i < 6; i++) {
                 const d = new Date(ISOweekStart);
@@ -876,111 +654,64 @@
 
         function recopilarFechas() {
             const lista = [];
-
             if (modoFechaActual === 'dia') {
                 const f = document.getElementById('txtFechaIndividual')?.value;
                 if (f) lista.push(f);
-            }
-            else if (modoFechaActual === 'salteados') {
+            } else if (modoFechaActual === 'salteados') {
                 return [...diasSalteados];
-            }
-            else if (modoFechaActual === 'semana') {
+            } else if (modoFechaActual === 'semana') {
                 const sem = document.getElementById('txtSemana')?.value;
-                if (sem) {
-                    const fechas = obtenerFechasDeSemana(sem);
-                    fechas.forEach(d => lista.push(d.toISOString().split('T')[0]));
-                }
-            }
-            else if (modoFechaActual === 'rango') {
+                if (sem) obtenerFechasDeSemana(sem).forEach(d => lista.push(d.toISOString().split('T')[0]));
+            } else if (modoFechaActual === 'rango') {
                 const fInicioVal = document.getElementById('txtFechaDesde')?.value;
                 const fFinVal = document.getElementById('txtFechaHasta')?.value;
-
                 if (fInicioVal && fFinVal) {
-                    const fInicio = new Date(fInicioVal + 'T00:00:00');
-                    const fFin = new Date(fFinVal + 'T00:00:00');
-
-                    if (fInicio <= fFin) {
-                        let actual = new Date(fInicio);
-                        while (actual <= fFin) {
-                            lista.push(actual.toISOString().split('T')[0]);
-                            actual.setDate(actual.getDate() + 1);
-                        }
+                    let actual = new Date(fInicioVal + 'T00:00:00');
+                    let fFin = new Date(fFinVal + 'T00:00:00');
+                    while (actual <= fFin) {
+                        lista.push(actual.toISOString().split('T')[0]);
+                        actual.setDate(actual.getDate() + 1);
                     }
                 }
             }
-
             return lista;
         }
 
-        // ==========================================================
-        // GUARDADO MASIVO CON FEEDBACK VISUAL MEJORADO
-        // ==========================================================
         async function ejecutarEnvio(event) {
             event.preventDefault();
-
             const fechas = recopilarFechas();
-            if (fechas.length === 0) {
-                mostrarToast('Fecha Requerida', 'Debe especificar al menos una fecha de producción.', 'warning');
-                return false;
-            }
+            if (fechas.length === 0) { mostrarToast('Fecha Requerida', 'Especifique al menos una fecha.', 'warning'); return false; }
 
             const selTurno = document.querySelector('input[name="TurnoId"]:checked');
             const turnoId = selTurno ? parseInt(selTurno.value) : 0;
-            if (turnoId <= 0) {
-                mostrarToast('Turno Requerido', 'Debe seleccionar un turno para la orden.', 'warning');
-                return false;
-            }
+            if (turnoId <= 0) { mostrarToast('Turno Requerido', 'Seleccione un turno.', 'warning'); return false; }
 
             const filasCeldas = document.querySelectorAll('.item-celda-config');
-            if (filasCeldas.length === 0) {
-                mostrarToast('Celdas Requeridas', 'Debe seleccionar al menos una celda / workcenter.', 'warning');
-                return false;
-            }
+            if (filasCeldas.length === 0) { mostrarToast('Celdas Requeridas', 'Seleccione al menos una celda.', 'warning'); return false; }
 
             const asignaciones = [];
-            let validacionIncompleta = false;
-
+            let incompleto = false;
             filasCeldas.forEach(fila => {
                 const celdaId = parseInt(fila.dataset.celdaId);
                 const parteId = parseInt(fila.querySelector('.sel-parte-individual')?.value || 0);
                 const cantidad = parseInt(fila.querySelector('.txt-cantidad-individual')?.value || 0);
-
-                if (!parteId || parteId <= 0 || !cantidad || cantidad <= 0) {
-                    validacionIncompleta = true;
-                }
-
-                asignaciones.push({
-                    celdaId: celdaId,
-                    parteId: parteId,
-                    cantidadPiezas: cantidad
-                });
+                if (!parteId || !cantidad) incompleto = true;
+                asignaciones.push({ celdaId, parteId, cantidadPiezas: cantidad });
             });
 
-            if (validacionIncompleta) {
-                mostrarToast('Configuración Incompleta', 'Asegúrese de que cada celda tenga seleccionado su número de parte y una cantidad mayor a 0.', 'warning');
-                return false;
-            }
-
-            const razon = document.getElementById('txtRazonObligatoria')?.value.trim();
-            if (!razon) {
-                mostrarToast('Campo Obligatorio', 'La razón de la programación es obligatoria.', 'warning');
-                document.getElementById('txtRazonObligatoria')?.focus();
-                return false;
-            }
+            if (incompleto) { mostrarToast('Incompleto', 'Complete número de parte y cantidad.', 'warning'); return false; }
 
             const horas = parseFloat(document.getElementById('txtTiempoEstimado')?.value || 8);
             const btn = document.getElementById('btnSubmitProgramacion');
-            if (btn) {
-                btn.disabled = true;
-                btn.innerText = 'Guardando programación...';
-            }
+            if (btn) { btn.disabled = true; btn.innerText = 'Guardando...'; }
 
             const payload = {
                 asignaciones: asignaciones,
                 fechas: fechas,
                 turnoId: turnoId,
                 horasNetas: isNaN(horas) ? 8 : horas,
-                razonCambio: razon
+                razonCambio: '', // Razón omitida/vacía
+                parosTemporales: parosTemporalesList
             };
 
             try {
@@ -990,24 +721,16 @@
                     body: JSON.stringify(payload)
                 });
                 const res = await resp.json();
-
                 if (res.success) {
                     mostrarModalExito(res.message);
                 } else {
-                    mostrarToast('Error al Guardar', res.message, 'error');
-                    if (btn) {
-                        btn.disabled = false;
-                        btn.innerText = 'Guardar Programación';
-                    }
+                    mostrarToast('Error', res.message, 'error');
+                    if (btn) { btn.disabled = false; btn.innerText = 'Guardar Programación'; }
                 }
             } catch (err) {
-                mostrarToast('Error de Red', 'No fue posible conectar con el servidor: ' + err.message, 'error');
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerText = 'Guardar Programación';
-                }
+                mostrarToast('Error de Red', err.message, 'error');
+                if (btn) { btn.disabled = false; btn.innerText = 'Guardar Programación'; }
             }
-
             return false;
         }
     </script>

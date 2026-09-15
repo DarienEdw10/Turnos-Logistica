@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TurnosLogistica.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f6c9f00b1ddef7a7aafc72e047faa288d2fee470")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3566412b8f02f93664cc504c96a371fadaf6ce33")]
 [assembly: System.Reflection.AssemblyProductAttribute("TurnosLogistica.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TurnosLogistica.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

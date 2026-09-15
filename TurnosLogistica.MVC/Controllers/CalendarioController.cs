@@ -22,6 +22,7 @@ public class CalendarioController : Controller
         int? plantaId,
         string agrupacion = "proyecto",
         string granularidad = "mensual",
+        string? fecha = null,
         int? mes = null,
         int? anio = null,
         string? linea = null,
@@ -29,11 +30,33 @@ public class CalendarioController : Controller
         string? turno = null)
     {
         int pId = plantaId ?? ObtenerPlantaActivaId();
-        int m = mes ?? DateTime.Today.Month;
-        int a = anio ?? DateTime.Today.Year;
+        
+        DateTime targetDate = DateTime.Today;
+        if (!string.IsNullOrEmpty(fecha) && DateTime.TryParse(fecha, out var parsedDate))
+        {
+            targetDate = parsedDate;
+        }
+        else if (mes.HasValue && anio.HasValue)
+        {
+            targetDate = new DateTime(anio.Value, Math.Clamp(mes.Value, 1, 12), 1);
+        }
 
-        // PlanificacionService ya calcula Estado y EstadoCss comparando con DateTime.Now
+        int m = targetDate.Month;
+        int a = targetDate.Year;
+
         var vm = await _service.ObtenerCalendarioAsync(pId, agrupacion, granularidad, m, a, linea, celda, turno);
+        
+        if (vm != null)
+        {
+            vm.FechaSeleccionada = targetDate;
+            vm.Granularidad = granularidad;
+            vm.Agrupacion = agrupacion;
+            vm.FiltroLinea = linea;
+            vm.FiltroCelda = celda;
+            vm.FiltroTurno = turno;
+            vm.PlantaId = pId;
+        }
+
         return View(vm);
     }
 
@@ -46,7 +69,7 @@ public class CalendarioController : Controller
         return 1;
     }
 
-    [HttpGet]
+[HttpGet]
     public async Task<IActionResult> ObtenerParosProgramacion(long programacionId)
     {
         var paros = await _context.TurnoParos
@@ -56,7 +79,8 @@ public class CalendarioController : Controller
                 id = p.Id,
                 tipoParo = p.TipoParo,
                 duracionMinutos = p.DuracionMinutos,
-                esProgramado = p.EsProgramado
+                esProgramado = p.EsProgramado,
+                categoriaParo = p.CategoriaParo // <-- NUEVO: Retorna la categoría (1, 2 o 3)
             })
             .ToListAsync();
 
@@ -90,9 +114,10 @@ public class CalendarioController : Controller
                     ProgramacionId = dto.ProgramacionId,
                     TurnoId = turnoIdAsociado,
                     TipoParo = p.TipoParo,
+                    Descripcion = string.IsNullOrWhiteSpace(p.Descripcion) ? p.TipoParo : p.Descripcion,
                     DuracionMinutos = p.DuracionMinutos,
                     EsProgramado = p.EsProgramado,
-                    Descripcion = string.IsNullOrWhiteSpace(p.Descripcion) ? p.TipoParo : p.Descripcion,
+                    CategoriaParo = p.CategoriaParo > 0 ? p.CategoriaParo : (p.EsProgramado ? (byte)1 : (byte)3), // <-- Guarda la categoría seleccionada (1, 2 o 3)
                     Activo = true
                 });
             }
@@ -115,5 +140,6 @@ public class CalendarioController : Controller
         public string? Descripcion { get; set; }
         public int DuracionMinutos { get; set; }
         public bool EsProgramado { get; set; }
+        public byte CategoriaParo { get; set; } // <-- NUEVO: Recibe 1 (Base), 2 (Temporal) o 3 (Imprevisto)
     }
 }

@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "Gf0wJmTZZTI=",
+  "dgSpecHash": "41FJcxp5aOY=",
   "success": true,
-  "projectFilePath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
+  "projectFilePath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\darijim1\\.nuget\\packages\\azure.core\\1.35.0\\azure.core.1.35.0.nupkg.sha512",
     "C:\\Users\\darijim1\\.nuget\\packages\\azure.identity\\1.10.3\\azure.identity.1.10.3.nupkg.sha512",
@@ -79,9 +79,9 @@
       "code": "NU1902",
       "level": "Warning",
       "message": "Package 'Azure.Identity' 1.10.3 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-m5vv-6r4h-3vj9",
-      "projectPath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
+      "projectPath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
       "warningLevel": 1,
-      "filePath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
+      "filePath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
       "libraryId": "Azure.Identity",
       "targetGraphs": [
         "net10.0"
@@ -91,9 +91,9 @@
       "code": "NU1902",
       "level": "Warning",
       "message": "Package 'Azure.Identity' 1.10.3 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-wvxc-855f-jvrv",
-      "projectPath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
+      "projectPath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
       "warningLevel": 1,
-      "filePath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
+      "filePath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
       "libraryId": "Azure.Identity",
       "targetGraphs": [
         "net10.0"
@@ -103,9 +103,9 @@
       "code": "NU1903",
       "level": "Warning",
       "message": "Package 'Microsoft.AspNetCore.Authentication.Negotiate' 8.0.11 has a known high severity vulnerability, https://github.com/advisories/GHSA-2p3q-h3hg-jcqq",
-      "projectPath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
+      "projectPath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
       "warningLevel": 1,
-      "filePath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
+      "filePath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
       "libraryId": "Microsoft.AspNetCore.Authentication.Negotiate",
       "targetGraphs": [
         "net10.0"
@@ -115,9 +115,9 @@
       "code": "NU1903",
       "level": "Warning",
       "message": "Package 'Microsoft.AspNetCore.Authentication.Negotiate' 8.0.11 has a known high severity vulnerability, https://github.com/advisories/GHSA-8prm-248r-h957",
-      "projectPath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
+      "projectPath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
       "warningLevel": 1,
-      "filePath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
+      "filePath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
       "libraryId": "Microsoft.AspNetCore.Authentication.Negotiate",
       "targetGraphs": [
         "net10.0"
@@ -127,9 +127,9 @@
       "code": "NU1902",
       "level": "Warning",
       "message": "Package 'Microsoft.Identity.Client' 4.56.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-m5vv-6r4h-3vj9",
-      "projectPath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
+      "projectPath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
       "warningLevel": 1,
-      "filePath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
+      "filePath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
       "libraryId": "Microsoft.Identity.Client",
       "targetGraphs": [
         "net10.0"
@@ -139,9 +139,9 @@
       "code": "NU1901",
       "level": "Warning",
       "message": "Package 'Microsoft.Identity.Client' 4.56.0 has a known low severity vulnerability, https://github.com/advisories/GHSA-x674-v45j-fwxw",
-      "projectPath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
+      "projectPath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
       "warningLevel": 1,
-      "filePath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
+      "filePath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Tests\\TurnosLogistica.Tests.csproj",
       "libraryId": "Microsoft.Identity.Client",
       "targetGraphs": [
         "net10.0"

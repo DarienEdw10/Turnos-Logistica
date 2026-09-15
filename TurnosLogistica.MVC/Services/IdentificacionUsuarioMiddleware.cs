@@ -13,14 +13,8 @@ public class IdentificacionUsuarioMiddleware
 
     public async Task InvokeAsync(HttpContext context, UsuarioAuthService authService)
     {
-        // 1. Detectar CWID desde Windows SSO, simulador de cookies o entorno
+        // 1. Detectar CWID desde Windows SSO o fallback de entorno (Sin simulador)
         string cwidRaw = context.User.Identity?.Name ?? string.Empty;
-
-        // Si usas el simulador de prueba por cookie
-        if (context.Request.Cookies.TryGetValue("Simulador_CWID", out string? cwidSimulado) && !string.IsNullOrWhiteSpace(cwidSimulado))
-        {
-            cwidRaw = cwidSimulado;
-        }
 
         // Fallback en desarrollo: usuario de la máquina
         if (string.IsNullOrWhiteSpace(cwidRaw))
@@ -36,7 +30,7 @@ public class IdentificacionUsuarioMiddleware
 
         if (claimCwidActual != cwidLimpio || !tienePlantaAsignada)
         {
-            // Ejecuta la identificación silenciosa con tu servicio
+            // Ejecuta la identificación silenciosa con tu servicio usando la identidad real
             await authService.IdentificarUsuarioAutomaticoAsync(cwidLimpio, context);
         }
 

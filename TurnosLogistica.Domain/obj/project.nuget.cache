@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "UYUX3vt7wOI=",
+  "dgSpecHash": "GoiCiwqtJFw=",
   "success": true,
-  "projectFilePath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Domain\\TurnosLogistica.Domain.csproj",
+  "projectFilePath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Domain\\TurnosLogistica.Domain.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\darijim1\\.nuget\\packages\\azure.core\\1.35.0\\azure.core.1.35.0.nupkg.sha512",
     "C:\\Users\\darijim1\\.nuget\\packages\\azure.identity\\1.10.3\\azure.identity.1.10.3.nupkg.sha512",

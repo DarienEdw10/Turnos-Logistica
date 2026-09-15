@@ -1,7 +1,25 @@
+@inject TurnosLogistica.Domain.Data.AppDbContext DbContext
+@using Microsoft.EntityFrameworkCore
 @{
     ViewData["Title"] = "Gestión de Colaboradores y Permisos";
-    bool esSistemas = ViewBag.EsSistemas ?? false;
-    int nivelUsuarioActual = ViewBag.NivelUsuarioActual ?? 10;
+    
+    // Obtener identidad actual para consultar el nivel real de forma segura y directa
+    string rawIdentity = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                      ?? User.FindFirst("CWID")?.Value
+                      ?? User?.Identity?.Name
+                      ?? Environment.UserName;
+
+    string cwid = rawIdentity.Contains('\\') ? rawIdentity.Split('\\')[1].Trim() : rawIdentity.Trim();
+    string cwidUpper = cwid.ToUpperInvariant();
+
+    var usuarioActualDb = DbContext.Usuarios
+        .AsNoTracking()
+        .FirstOrDefault(x => (x.CWID != null && x.CWID.ToUpper() == cwidUpper) || x.NoEmpleado == cwid);
+
+    int nivelReal = usuarioActualDb?.Nivel ?? 10;
+    string rolReal = usuarioActualDb?.Rol?.ToLower() ?? "operador";
+    bool esSistemasReal = (rolReal == "sistemas" || nivelReal >= 40 || (ViewBag.EsSistemas ?? false));
+
     bool soloLectura = ViewBag.SoloLectura ?? false;
     int plantaActivaId = ViewBag.PlantaActivaId ?? 1;
     int plantaAsignadaId = ViewBag.PlantaAsignadaId ?? 1;
@@ -205,7 +223,7 @@
             <div id="msgAlerta" style="display:none; padding:12px; border-radius:8px; margin-bottom:16px; font-size:13px; font-weight:600;"></div>
 
             <div class="form-group" style="margin-bottom:18px;">
-                <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:6px; text-transform:uppercase;">Colaborador Seleccionado:</label>
+                <label for="txtColaboradorSeleccionado" style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:6px; text-transform:uppercase;">Colaborador Seleccionado:</label>
                 <input type="text" id="txtColaboradorSeleccionado" class="form-control" placeholder="Selecciona un colaborador de la lista..." readonly style="background:#f8fafc; font-weight:600; color:#334155;">
                 <input type="hidden" id="hdnCwid">
                 <input type="hidden" id="hdnNombre">
@@ -213,26 +231,37 @@
             </div>
 
             <div class="form-group" style="margin-bottom:20px;">
-                <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:6px; text-transform:uppercase;">Nivel de Acceso en Sistema:</label>
+                <label for="ddlNivel" style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:6px; text-transform:uppercase;">Nivel de Acceso en Sistema:</label>
                 <select id="ddlNivel" class="form-control" style="padding:10px; font-weight:600;" @(soloLectura ? "disabled" : "")>
                     <option value="10">Nivel 10 - Operador Logístico (Solo Agenda su Área)</option>
-                    <option value="20">Nivel 20 - Jefe de Logística (Programa y Aprueba)</option>
-                    
-                    @if (esSistemas)
+                    <option value="15">Nivel 15 - Programador de Logística (Formulario de Programación)</option>
+
+                    @* CANDADO ESTRICTO: Solo si el nivel real en BD es mayor o igual a 30 (Admin o Sistemas) muestra el 20 y el 30 *@
+                    @if (nivelReal >= 30)
                     {
+                        <option value="20">Nivel 20 - Jefe de Logística (Programa y Aprueba)</option>
                         <option value="30">Nivel 30 - Administrador de Planta (Acceso Total a su Planta)</option>
+                    }
+
+                    @* Estrictamente exclusivo para Nivel 40 (Sistemas) *@
+                    @if (nivelReal >= 40)
+                    {
                         <option value="40">Nivel 40 - Sistemas (Superadmin / Solo Roles)</option>
                     }
                 </select>
                 
                 <div style="font-size:12px; color:var(--text-muted); line-height:1.5; margin-top:12px; padding:10px; background:#f8fafc; border-radius:6px; border:1px solid #e2e8f0;">
-                    @if (esSistemas)
+                    @if (nivelReal >= 40)
                     {
                         <div>* <strong>Sistemas:</strong> Puede crear y asignar cualquier rol inter-planta con registro de auditoría técnica.</div>
                     }
+                    else if (nivelReal == 20)
+                    {
+                        <div>* <strong>Jefe de Logística:</strong> Por seguridad, únicamente puedes otorgar roles operativos de Operador (Nivel 10) y Programador de Logística (Nivel 15) en tu planta.</div>
+                    }
                     else
                     {
-                        <div>* <strong>Administrador:</strong> Puede otorgar roles a Jefes de Logística (Nivel 20) y Operadores (Nivel 10) exclusivamente en su planta asignada.</div>
+                        <div>* <strong>Administrador:</strong> Puede otorgar roles operativos y de jefatura en su planta asignada.</div>
                         <div style="margin-top:2px; color:#b45309;">* Solo el rol <strong>Sistemas</strong> puede asignar nuevos Administradores.</div>
                     }
                 </div>

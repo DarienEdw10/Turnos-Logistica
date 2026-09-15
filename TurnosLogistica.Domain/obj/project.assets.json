@@ -2859,11 +2859,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Domain\\TurnosLogistica.Domain.csproj",
+      "projectUniqueName": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Domain\\TurnosLogistica.Domain.csproj",
       "projectName": "TurnosLogistica.Domain",
-      "projectPath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Domain\\TurnosLogistica.Domain.csproj",
+      "projectPath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Domain\\TurnosLogistica.Domain.csproj",
       "packagesPath": "C:\\Users\\darijim1\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Domain\\obj\\",
+      "outputPath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Domain\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\darijim1\\AppData\\Roaming\\NuGet\\NuGet.Config"

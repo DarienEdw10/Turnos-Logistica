@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "KxA1KAd6+g8=",
+  "dgSpecHash": "AJLfuD6lm7I=",
   "success": true,
-  "projectFilePath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.MVC\\TurnosLogistica.MVC.csproj",
+  "projectFilePath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.MVC\\TurnosLogistica.MVC.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\darijim1\\.nuget\\packages\\azure.core\\1.35.0\\azure.core.1.35.0.nupkg.sha512",
     "C:\\Users\\darijim1\\.nuget\\packages\\azure.identity\\1.10.3\\azure.identity.1.10.3.nupkg.sha512",
@@ -71,19 +71,19 @@
     "C:\\Users\\darijim1\\.nuget\\packages\\system.text.json\\4.7.2\\system.text.json.4.7.2.nupkg.sha512",
     "C:\\Users\\darijim1\\.nuget\\packages\\system.threading.tasks.extensions\\4.5.4\\system.threading.tasks.extensions.4.5.4.nupkg.sha512",
     "C:\\Users\\darijim1\\.nuget\\packages\\system.windows.extensions\\6.0.0\\system.windows.extensions.6.0.0.nupkg.sha512",
-    "C:\\Users\\darijim1\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\8.0.30\\microsoft.aspnetcore.app.ref.8.0.30.nupkg.sha512",
-    "C:\\Users\\darijim1\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\8.0.30\\microsoft.netcore.app.host.win-x64.8.0.30.nupkg.sha512",
     "C:\\Users\\darijim1\\.nuget\\packages\\microsoft.netcore.app.ref\\8.0.30\\microsoft.netcore.app.ref.8.0.30.nupkg.sha512",
-    "C:\\Users\\darijim1\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\8.0.30\\microsoft.windowsdesktop.app.ref.8.0.30.nupkg.sha512"
+    "C:\\Users\\darijim1\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\8.0.30\\microsoft.windowsdesktop.app.ref.8.0.30.nupkg.sha512",
+    "C:\\Users\\darijim1\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\8.0.30\\microsoft.aspnetcore.app.ref.8.0.30.nupkg.sha512",
+    "C:\\Users\\darijim1\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\8.0.30\\microsoft.netcore.app.host.win-x64.8.0.30.nupkg.sha512"
   ],
   "logs": [
     {
       "code": "NU1903",
       "level": "Warning",
-      "message": "El paquete \"Microsoft.AspNetCore.Authentication.Negotiate\" 8.0.11 tiene una vulnerabilidad de gravedad alta conocida, https://github.com/advisories/GHSA-2p3q-h3hg-jcqq",
-      "projectPath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.MVC\\TurnosLogistica.MVC.csproj",
+      "message": "Package 'Microsoft.AspNetCore.Authentication.Negotiate' 8.0.11 has a known high severity vulnerability, https://github.com/advisories/GHSA-2p3q-h3hg-jcqq",
+      "projectPath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.MVC\\TurnosLogistica.MVC.csproj",
       "warningLevel": 1,
-      "filePath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.MVC\\TurnosLogistica.MVC.csproj",
+      "filePath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.MVC\\TurnosLogistica.MVC.csproj",
       "libraryId": "Microsoft.AspNetCore.Authentication.Negotiate",
       "targetGraphs": [
         "net8.0"
@@ -92,10 +92,10 @@
     {
       "code": "NU1903",
       "level": "Warning",
-      "message": "El paquete \"Microsoft.AspNetCore.Authentication.Negotiate\" 8.0.11 tiene una vulnerabilidad de gravedad alta conocida, https://github.com/advisories/GHSA-8prm-248r-h957",
-      "projectPath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.MVC\\TurnosLogistica.MVC.csproj",
+      "message": "Package 'Microsoft.AspNetCore.Authentication.Negotiate' 8.0.11 has a known high severity vulnerability, https://github.com/advisories/GHSA-8prm-248r-h957",
+      "projectPath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.MVC\\TurnosLogistica.MVC.csproj",
       "warningLevel": 1,
-      "filePath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.MVC\\TurnosLogistica.MVC.csproj",
+      "filePath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.MVC\\TurnosLogistica.MVC.csproj",
       "libraryId": "Microsoft.AspNetCore.Authentication.Negotiate",
       "targetGraphs": [
         "net8.0"

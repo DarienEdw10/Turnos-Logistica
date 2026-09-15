@@ -3217,11 +3217,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Api\\TurnosLogistica.Api.csproj",
+      "projectUniqueName": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Api\\TurnosLogistica.Api.csproj",
       "projectName": "TurnosLogistica.Api",
-      "projectPath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Api\\TurnosLogistica.Api.csproj",
+      "projectPath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Api\\TurnosLogistica.Api.csproj",
       "packagesPath": "C:\\Users\\darijim1\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Api\\obj\\",
+      "outputPath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Api\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\darijim1\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -3237,8 +3237,8 @@
           "framework": "net8.0",
           "targetAlias": "net8.0",
           "projectReferences": {
-            "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Domain\\TurnosLogistica.Domain.csproj": {
-              "projectPath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Domain\\TurnosLogistica.Domain.csproj"
+            "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Domain\\TurnosLogistica.Domain.csproj": {
+              "projectPath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Domain\\TurnosLogistica.Domain.csproj"
             }
           }
         }

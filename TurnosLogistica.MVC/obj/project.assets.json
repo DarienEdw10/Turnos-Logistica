@@ -3392,11 +3392,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.MVC\\TurnosLogistica.MVC.csproj",
+      "projectUniqueName": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.MVC\\TurnosLogistica.MVC.csproj",
       "projectName": "TurnosLogistica.MVC",
-      "projectPath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.MVC\\TurnosLogistica.MVC.csproj",
+      "projectPath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.MVC\\TurnosLogistica.MVC.csproj",
       "packagesPath": "C:\\Users\\darijim1\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.MVC\\obj\\",
+      "outputPath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.MVC\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\darijim1\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -3412,8 +3412,8 @@
           "framework": "net8.0",
           "targetAlias": "net8.0",
           "projectReferences": {
-            "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Domain\\TurnosLogistica.Domain.csproj": {
-              "projectPath": "C:\\Users\\darijim1\\Documents\\Turnos Logistica\\TurnosLogistica.Domain\\TurnosLogistica.Domain.csproj"
+            "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Domain\\TurnosLogistica.Domain.csproj": {
+              "projectPath": "C:\\Users\\darijim1\\Desktop\\Respaldo de proyecto logistica\\Turnos Logistica\\TurnosLogistica.Domain\\TurnosLogistica.Domain.csproj"
             }
           }
         }
@@ -3494,7 +3494,7 @@
       "code": "NU1903",
       "level": "Warning",
       "warningLevel": 1,
-      "message": "El paquete \"Microsoft.AspNetCore.Authentication.Negotiate\" 8.0.11 tiene una vulnerabilidad de gravedad alta conocida, https://github.com/advisories/GHSA-2p3q-h3hg-jcqq",
+      "message": "Package 'Microsoft.AspNetCore.Authentication.Negotiate' 8.0.11 has a known high severity vulnerability, https://github.com/advisories/GHSA-2p3q-h3hg-jcqq",
       "libraryId": "Microsoft.AspNetCore.Authentication.Negotiate",
       "targetGraphs": [
         "net8.0"
@@ -3504,7 +3504,7 @@
       "code": "NU1903",
       "level": "Warning",
       "warningLevel": 1,
-      "message": "El paquete \"Microsoft.AspNetCore.Authentication.Negotiate\" 8.0.11 tiene una vulnerabilidad de gravedad alta conocida, https://github.com/advisories/GHSA-8prm-248r-h957",
+      "message": "Package 'Microsoft.AspNetCore.Authentication.Negotiate' 8.0.11 has a known high severity vulnerability, https://github.com/advisories/GHSA-8prm-248r-h957",
       "libraryId": "Microsoft.AspNetCore.Authentication.Negotiate",
       "targetGraphs": [
         "net8.0"

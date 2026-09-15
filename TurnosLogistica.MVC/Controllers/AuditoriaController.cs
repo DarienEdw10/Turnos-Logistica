@@ -48,7 +48,12 @@ public class AuditoriaController : Controller
             return View(vm);
         }
 
-        vm.Registros = await _auditoriaRepo.ConsultarHistorialAsync(plantaId, fInicio, fFin);
+        var registros = await _auditoriaRepo.ConsultarHistorialAsync(plantaId, fInicio, fFin);
+
+        // Ajuste de zona horaria de UTC a Hora de México
+        AjustarHorarioRegistros(registros);
+
+        vm.Registros = registros;
         return View(vm);
     }
 
@@ -72,6 +77,9 @@ public class AuditoriaController : Controller
 
         var registros = await _auditoriaRepo.ConsultarHistorialAsync(plantaId, fInicio, fFin);
 
+        // Ajuste de zona horaria de UTC a Hora de México
+        AjustarHorarioRegistros(registros);
+
         var sb = new StringBuilder();
         sb.AppendLine("ID,FECHA_HORA,USUARIO,ROL,ACCION,AGENDA_CAMBIO,RAZON");
 
@@ -84,6 +92,29 @@ public class AuditoriaController : Controller
 
         byte[] buffer = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(sb.ToString())).ToArray();
         return File(buffer, "text/csv; charset=utf-8", $"Auditoria_Planta{plantaId}_{DateTime.Now:yyyyMMdd_HHmm}.csv");
+    }
+
+    private void AjustarHorarioRegistros(IEnumerable<dynamic> registros)
+    {
+   TimeZoneInfo tzMexico;
+        try
+        {
+            tzMexico = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
+        }
+        catch
+        {
+            tzMexico = TimeZoneInfo.FindSystemTimeZoneById("America/Mexico_City");
+        }
+
+        foreach (var r in registros)
+        {
+            DateTime fechaUtc = r.FechaAccion.Kind == DateTimeKind.Unspecified 
+                ? DateTime.SpecifyKind(r.FechaAccion, DateTimeKind.Utc) 
+                : r.FechaAccion.ToUniversalTime();
+
+            // Convertimos y le restamos exactamente 1 hora para eliminar el desfase visual
+            r.FechaAccion = TimeZoneInfo.ConvertTimeFromUtc(fechaUtc, tzMexico).AddHours(-1);
+        }
     }
 
     private bool TienePermisoAuditoria()

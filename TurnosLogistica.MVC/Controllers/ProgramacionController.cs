@@ -100,7 +100,7 @@ public class ProgramacionController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [ServiceFilter(typeof(ValidarOperacionPlantaAttribute))] // <-- Candado Multi-Planta
+    [ServiceFilter(typeof(ValidarOperacionPlantaAttribute))]
     public async Task<IActionResult> Guardar(ProgramacionFormViewModel model)
     {
         int plantaId = ObtenerPlantaActivaId();
@@ -135,7 +135,7 @@ public class ProgramacionController : Controller
     }
 
     [HttpPost]
-    [ServiceFilter(typeof(ValidarOperacionPlantaAttribute))] // <-- Candado Multi-Planta
+    [ServiceFilter(typeof(ValidarOperacionPlantaAttribute))]
     public async Task<IActionResult> GuardarProgramacionMasiva([FromBody] ProgramacionMasivaDto dto)
     {
         if (dto == null || !dto.Asignaciones.Any() || !dto.Fechas.Any() || dto.TurnoId <= 0)
@@ -169,8 +169,43 @@ public class ProgramacionController : Controller
                             RazonObligatoria = dto.RazonCambio ?? "Programación masiva balanceada"
                         };
 
+                        // 1. Guardar la programación principal
                         await _service.GuardarProgramacionAsync(model, usuarioId: usuarioId);
                         registrosProcesados++;
+
+                        // 2. RECUPERAR la programación recién creada
+                        var programacionCreada = await _context.Programaciones
+                            .OrderByDescending(p => p.Id)
+                            .FirstOrDefaultAsync(p => p.Fecha.Date == fecha.Date 
+                                                   && p.TurnoId == dto.TurnoId 
+                                                   && p.NumeroParteId == item.ParteId);
+
+                        if (programacionCreada != null && dto.ParosTemporales != null && dto.ParosTemporales.Any())
+                        {
+                            foreach (var pt in dto.ParosTemporales)
+                            {
+                                bool existe = await _context.TurnoParos.AnyAsync(tp => 
+                                    tp.ProgramacionId == programacionCreada.Id && 
+                                    tp.TipoParo == pt.Descripcion && 
+                                    tp.DuracionMinutos == pt.DuracionMinutos);
+
+                                if (!existe)
+                                {
+                                    _context.TurnoParos.Add(new TurnoParo
+                                    {
+                                        ProgramacionId = programacionCreada.Id,
+                                        TurnoId = dto.TurnoId,
+                                        TipoParo = pt.Descripcion,
+                                        Descripcion = pt.Descripcion,
+                                        DuracionMinutos = pt.DuracionMinutos,
+                                        EsProgramado = true, 
+                                        CategoriaParo = 2, // 2 = Paro Temporal / Programado desde el formulario
+                                        Activo = true
+                                    });
+                                }
+                            }
+                            await _context.SaveChangesAsync();
+                        }
                     }
                 }
             });
@@ -178,7 +213,7 @@ public class ProgramacionController : Controller
             return Json(new
             {
                 success = true,
-                message = $"Programación procesada con éxito ({registrosProcesados} órdenes generadas)."
+                message = $"Programación procesada y paros temporales registrados con éxito ({registrosProcesados} órdenes generadas)."
             });
         }
         catch (Exception ex)
@@ -215,7 +250,7 @@ public class ProgramacionController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> ObtenerParosYHorasTurno(int turnoId)
+    public async Task<IActionResult> ObtenerParosYHorasTurno(int turnoId, string? fecha = null)
     {
         var turno = await _context.Turnos
             .AsNoTracking()
@@ -226,19 +261,21 @@ public class ProgramacionController : Controller
 
         double horasBrutas = Math.Round(turno.DuracionHoras, 2);
 
-        var paros = await _context.TurnoParos
+        // Obtener paros base del turno (CategoriaParo == 1 o EsProgramado por defecto)
+        var parosBase = await _context.TurnoParos
             .AsNoTracking()
-            .Where(p => p.TurnoId == turnoId && p.EsProgramado && p.Activo)
+            .Where(p => p.TurnoId == turnoId && p.Activo && (p.CategoriaParo == 1 || (p.ProgramacionId == null && p.EsProgramado)))
             .Select(p => new
             {
                 id = p.Id,
                 tipoParo = p.TipoParo,
                 descripcion = p.Descripcion ?? p.TipoParo,
-                duracionMinutos = p.DuracionMinutos
+                duracionMinutos = p.DuracionMinutos,
+                categoriaParo = p.CategoriaParo
             })
             .ToListAsync();
 
-        double totalMinutosParo = paros.Sum(p => p.duracionMinutos);
+        double totalMinutosParo = parosBase.Sum(p => (int)p.duracionMinutos);
         double horasParos = Math.Round(totalMinutosParo / 60.0, 2);
         double horasNetas = Math.Max(0, Math.Round(horasBrutas - horasParos, 2));
 
@@ -249,8 +286,8 @@ public class ProgramacionController : Controller
             horasBrutas,
             horasParos,
             horasNetas,
-            tieneParos = paros.Any(),
-            paros
+            tieneParos = parosBase.Any(),
+            paros = parosBase
         });
     }
 
@@ -280,6 +317,12 @@ public class ProgramacionController : Controller
         public int CantidadPiezas { get; set; }
     }
 
+    public class ParoTemporalDto
+    {
+        public string Descripcion { get; set; } = string.Empty;
+        public int DuracionMinutos { get; set; }
+    }
+
     public class ProgramacionMasivaDto
     {
         public List<ItemAsignacionCeldaDto> Asignaciones { get; set; } = new();
@@ -287,5 +330,6 @@ public class ProgramacionController : Controller
         public int TurnoId { get; set; }
         public decimal HorasNetas { get; set; }
         public string? RazonCambio { get; set; }
+        public List<ParoTemporalDto> ParosTemporales { get; set; } = new();
     }
 }

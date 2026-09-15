@@ -27,26 +27,28 @@ public class UsuarioAuthService
         return rawCwid.Trim().ToUpperInvariant();
     }
 
-    public static string MapearRolSegunNivel(int nivel) => nivel switch
+   public static string MapearRolSegunNivel(int nivel) => nivel switch
     {
         >= 40 => "sistemas",
         >= 30 => "admin",
         >= 20 => "jefe_log",
+        >= 15 => "programador_logistica", // <-- NUEVO: Mapeo para el nivel 15
         _ => "operador"
     };
 
     public async Task<Usuario> SincronizarUsuarioAsync(
-        string cwid, 
-        string noEmpleado, 
-        string nombre, 
-        string email, 
-        int nivel, 
+        string cwid,
+        string noEmpleado,
+        string nombre,
+        string email,
+        int nivel,
         int plantaId)
     {
         string cwidLimpio = LimpiarCwid(cwid);
 
+        // Corrección: Validar que u.CWID no sea null antes de invocar .ToUpper()
         var usuario = await _context.Usuarios
-            .FirstOrDefaultAsync(u => u.CWID == cwidLimpio || u.NoEmpleado == noEmpleado);
+            .FirstOrDefaultAsync(u => (u.CWID != null && u.CWID.ToUpper() == cwidLimpio) || u.NoEmpleado == noEmpleado);
 
         string rol = MapearRolSegunNivel(nivel);
 
@@ -84,18 +86,17 @@ public class UsuarioAuthService
     public async Task<int> ObtenerNivelPorCwidAsync(string cwid)
     {
         string cwidLimpio = LimpiarCwid(cwid);
+        
+        // Corrección: Validar u.CWID != null
         var u = await _context.Usuarios
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.CWID == cwidLimpio && x.Activo);
+            .FirstOrDefaultAsync(x => x.CWID != null && x.CWID.ToUpper() == cwidLimpio && x.Activo);
 
         return u?.Nivel ?? 0;
     }
 
-    // =========================================================================
-    // 1. IDENTIFICACIÓN AUTOMÁTICA TRANSPARENTE (SSO / SIMULADOR / SIN LOGIN)
-    // =========================================================================
     public async Task<(bool Exito, string Mensaje, Usuario? Usuario)> IdentificarUsuarioAutomaticoAsync(
-        string rawCwid, 
+        string rawCwid,
         HttpContext httpContext)
     {
         string cwid = LimpiarCwid(rawCwid);
@@ -104,13 +105,16 @@ public class UsuarioAuthService
             return (false, "No se detectó CWID o identificador en la sesión.", null);
         }
 
+        // Corrección: Validar u.CWID != null
         var usuario = await _context.Usuarios
-            .FirstOrDefaultAsync(u => u.CWID == cwid || u.NoEmpleado == cwid);
+            .FirstOrDefaultAsync(u => (u.CWID != null && u.CWID.ToUpper() == cwid) || u.NoEmpleado == cwid);
 
         if (usuario == null)
         {
             usuario = new Usuario
             {
+                //GENERA UN USUARIO TEMPORAL CON ROL DE OPERADOR Y NIVEL 10
+                //EN CASO DE QUE NO EXISTA EN LA BASE DE DATOS
                 PlantaId = 1,
                 CWID = cwid,
                 NoEmpleado = cwid,
@@ -144,7 +148,6 @@ public class UsuarioAuthService
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var principal = new ClaimsPrincipal(identity);
 
-        // await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);    
         httpContext.User = principal;
         if (!httpContext.Request.Cookies.ContainsKey("PlantaActivaId"))
         {
@@ -159,12 +162,9 @@ public class UsuarioAuthService
         return (true, "Identificado automáticamente.", usuario);
     }
 
-    // =========================================================================
-    // 2. AUTENTICACIÓN HÍBRIDA (DLL CORPORATIVA / USUARIOS DE PRUEBA LOCALES)
-    // =========================================================================
     public async Task<(bool Exito, string Mensaje, Usuario? Usuario)> AutenticarEIniciarSesionAsync(
-        string rawCwid, 
-        string password, 
+        string rawCwid,
+        string password,
         HttpContext httpContext)
     {
         string cwid = LimpiarCwid(rawCwid);
@@ -180,34 +180,11 @@ public class UsuarioAuthService
         int plantaIdCorp = 0;
         int nivelCorp = 10;
 
-        // ---------------------------------------------------------------------
-        // PASO A: LLAMADA A LA DLL CORPORATIVA (PRODUCCIÓN)
-        // ---------------------------------------------------------------------
-        /*
-        try
-        {
-            // var servicioAuth = new Magna.Cosma.Autotek.Autentificacion.Library.Autenticacion();
-            // var emp = servicioAuth.Validar(cwid, password);
-            // if (emp != null && emp.Activo)
-            // {
-            //     validado = true;
-            //     nombreCorp = $"{emp.ApellidoPaterno} {emp.ApellidoMaterno}".Trim();
-            //     noEmpleadoCorp = emp.Id.ToString();
-            // }
-        }
-        catch (Exception)
-        {
-            validado = false;
-        }
-        */
-
-        // ---------------------------------------------------------------------
-        // PASO B: FALLBACK PARA USUARIOS LOCALES DE PRUEBA (NIVELES 10, 20, 30, 40)
-        // ---------------------------------------------------------------------
         if (!validado)
         {
+            // Corrección: Validar u.CWID != null
             var usuarioPrueba = await _context.Usuarios
-                .FirstOrDefaultAsync(u => (u.CWID == cwid || u.NoEmpleado == cwid) && u.Activo);
+                .FirstOrDefaultAsync(u => ((u.CWID != null && u.CWID.ToUpper() == cwid) || u.NoEmpleado == cwid) && u.Activo);
 
             if (usuarioPrueba != null)
             {
@@ -225,11 +202,9 @@ public class UsuarioAuthService
             return (false, "El usuario o CWID ingresado no existe o se encuentra inactivo.", null);
         }
 
-        // ---------------------------------------------------------------------
-        // PASO C: SINCRONIZACIÓN CON BASE DE DATOS LOCAL
-        // ---------------------------------------------------------------------
+        // Corrección: Validar u.CWID != null
         var usuarioLocal = await _context.Usuarios
-            .FirstOrDefaultAsync(u => u.CWID == cwid || u.NoEmpleado == noEmpleadoCorp);
+            .FirstOrDefaultAsync(u => (u.CWID != null && u.CWID.ToUpper() == cwid) || u.NoEmpleado == noEmpleadoCorp);
 
         Usuario usuarioFinal;
         if (usuarioLocal != null)
@@ -260,9 +235,6 @@ public class UsuarioAuthService
             );
         }
 
-        // ---------------------------------------------------------------------
-        // PASO D: CREAR CLAIMS DE SESIÓN (AISLAMIENTO POR PLANTA)
-        // ---------------------------------------------------------------------
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, usuarioFinal.Id.ToString()),
@@ -288,4 +260,5 @@ public class UsuarioAuthService
 
         return (true, "Acceso concedido.", usuarioFinal);
     }
+
 }
