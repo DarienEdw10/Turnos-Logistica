@@ -249,7 +249,7 @@ public class ProgramacionController : Controller
         return Json(partes);
     }
 
-    [HttpGet]
+   [HttpGet]
     public async Task<IActionResult> ObtenerParosYHorasTurno(int turnoId, string? fecha = null)
     {
         var turno = await _context.Turnos
@@ -261,17 +261,17 @@ public class ProgramacionController : Controller
 
         double horasBrutas = Math.Round(turno.DuracionHoras, 2);
 
-        // Obtener paros base del turno (CategoriaParo == 1 o EsProgramado por defecto)
+        // Obtener paros base del turno de forma robusta
         var parosBase = await _context.TurnoParos
             .AsNoTracking()
-            .Where(p => p.TurnoId == turnoId && p.Activo && (p.CategoriaParo == 1 || (p.ProgramacionId == null && p.EsProgramado)))
+            .Where(p => p.TurnoId == turnoId && p.Activo && p.ProgramacionId == null && (p.CategoriaParo == 1 || p.CategoriaParo == 0 || p.EsProgramado))
             .Select(p => new
             {
                 id = p.Id,
                 tipoParo = p.TipoParo,
                 descripcion = p.Descripcion ?? p.TipoParo,
                 duracionMinutos = p.DuracionMinutos,
-                categoriaParo = p.CategoriaParo
+                categoriaParo = p.CategoriaParo > 0 ? p.CategoriaParo : (byte)1 // Aseguramos categoría 1 por defecto para los base
             })
             .ToListAsync();
 
@@ -290,6 +290,21 @@ public class ProgramacionController : Controller
             paros = parosBase
         });
     }
+    [HttpGet]
+public async Task<IActionResult> ObtenerJerarquiaPorCelda(int celdaId)
+{
+    var celda = await _context.Celdas.FindAsync(celdaId);
+    if (celda == null) return NotFound();
+
+    var linea = await _context.Lineas.FindAsync(celda.LineaId);
+    if (linea == null) return NotFound();
+
+    return Json(new {
+        proyectoId = linea.ProyectoId ?? 0,
+        lineaId = linea.Id,
+        celdaId = celda.Id
+    });
+}
 
     private int ObtenerPlantaActivaId()
     {

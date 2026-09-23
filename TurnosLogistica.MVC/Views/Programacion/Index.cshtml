@@ -201,15 +201,15 @@
                     <!-- DESGLOSE DESCRIPTIVO DE PAROS (PROGRAMADOS VS TEMPORALES) -->
                     <div id="contenedorParosTurno" style="margin-top:10px; display:none;"></div>
 
-                    <!-- BOTÓN PARA AGREGAR PARO TEMPORAL DE UNA SOLA VEZ -->
+                    <!-- BOTÓN PARA ABRIR EL SELECTOR DE PAROS TEMPORALES DESDE EL CATÁLOGO -->
                     <div style="margin-top: 8px;">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="abrirModalParoTemporal()" style="font-size: 11px; width: 100%;">
+                        <button type="button" class="btn btn-secondary btn-sm" style="width: 100%; font-weight: 600;" onclick="abrirSelectorParoTemporal()">
                             + Agregar Paro Temporal
                         </button>
                     </div>
                 </div>
 
-                <!-- TIEMPO ESTIMADO DEL TURNO (DESHABILITADO PARA CÁLCULO AUTOMÁTICO) -->
+                <!-- TIEMPO ESTIMADO DEL TURNO -->
                 <div class="form-group" style="margin-top:16px; display: flex; flex-direction: column; gap: 5px;">
                     <label style="font-size:11px; font-weight:700; color:var(--text-muted, #64748b);">TIEMPO ESTIMADO DEL TURNO (HRS) * (Calculado Automáticamente)</label>
                     <input type="number" id="txtTiempoEstimado" name="TiempoEstimadoHoras" step="0.1" min="0.1"
@@ -232,21 +232,35 @@
     </div>
 </form>
 
-<!-- MODAL PARA AGREGAR PARO TEMPORAL -->
-<div id="modalParoTemporal" class="modal-confirm-overlay" style="display: none;">
-    <div class="modal-confirm-box" style="max-width: 400px; text-align: left;">
-        <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px; color: #1e293b;">Nuevo Paro Temporal</h3>
-        <div style="margin-bottom: 10px;">
-            <label style="font-size: 11px; font-weight: 700; color: #64748b;">Motivo / Descripción *</label>
-            <input type="text" id="txtDescParoTemporal" class="form-control" placeholder="Ej. Mantenimiento correctivo imprevisto" style="width:100%;" />
+<!-- MODAL SELECTOR DESDE EL CATÁLOGO DE PAROS TEMPORALES -->
+<div id="modalSelectorParoOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:260; align-items:center; justify-content:center;">
+    <div style="background:#ffffff; border-radius:12px; padding:24px; width:100%; max-width:520px; box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="font-size:16px; font-weight:700; margin:0; color:#1e293b;">Seleccionar Paro Temporal del Catálogo</h3>
+            <button type="button" onclick="cerrarSelectorParo()" style="background:none; border:none; font-size:18px; cursor:pointer; color:#64748b;">&times;</button>
         </div>
-        <div style="margin-bottom: 16px;">
-            <label style="font-size: 11px; font-weight: 700; color: #64748b;">Duración (Minutos) *</label>
-            <input type="number" id="txtMinutosParoTemporal" class="form-control" min="1" value="30" style="width:100%;" />
+
+        <div style="margin-bottom:12px;">
+            <input type="text" id="busquedaParoCat" class="form-control" placeholder="Buscar motivo en catálogo..." onkeyup="filtrarCatalogoParos()" style="width:100%; padding:8px; border-radius:6px; border:1px solid #e2e8f0;" />
         </div>
-        <div style="display: flex; gap: 8px; justify-content: flex-end;">
-            <button type="button" class="btn btn-secondary btn-sm" onclick="cerrarModalParoTemporal()">Cancelar</button>
-            <button type="button" class="btn btn-primary btn-sm" onclick="guardarParoTemporalLocal()">Añadir Paro</button>
+
+        <div class="table-wrap" style="max-height:260px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:6px;">
+            <table style="font-size:12px; width:100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background:#f8fafc;">
+                        <th style="padding:8px; text-align:left;">Motivo / Descripción</th>
+                        <th style="width:90px; text-align:center; padding:8px;">Duración</th>
+                        <th style="width:80px; text-align:center; padding:8px;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="listaCatalogoParosModal">
+                    <!-- Dinámico -->
+                </tbody>
+            </table>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid #e2e8f0; padding-top:14px; margin-top:16px;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="cerrarSelectorParo()">Cerrar</button>
         </div>
     </div>
 </div>
@@ -264,13 +278,16 @@
     </div>
 </div>
 
-@section Scripts {
+
+   @section Scripts {
     <script>
         let modoFechaActual = 'dia';
         let celdasDisponibles = [];
         let diasSalteados = [];
         let parosTemporalesList = [];
         let datosTurnoActual = { horasBrutas: 0, parosBase: [] };
+        let catalogoParosCache = [];
+        let asignacionesSeleccionadasMap = new Map(); // Almacena celdas seleccionadas acumuladas
 
         function mostrarToast(titulo, mensaje, tipo = 'warning') {
             const container = document.getElementById('toastContainer');
@@ -292,11 +309,35 @@
         function cerrarModalExito(irACalendario = false) {
             const modal = document.getElementById('modalExitoProgramacion');
             if (modal) modal.style.display = 'none';
-            if (irACalendario) window.location.href = '/Calendario';
-            else window.location.reload();
+            
+            if (irACalendario) {
+                window.location.href = '/Calendario';
+            } else {
+                // MANTENER INFORMACIÓN: Reactivamos el botón sin recargar ni limpiar las variables globales
+                const btn = document.getElementById('btnSubmitProgramacion');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerText = 'Guardar Programación';
+                }
+                
+            }
         }
 
-        async function cargarLineas(proyectoId) {
+        // NUEVA FUNCIÓN: Eliminar una celda acumulada directamente con la "X" sin estar en el menú
+        function removerCeldaAcumulada(celdaId) {
+            asignacionesSeleccionadasMap.delete(parseInt(celdaId));
+            
+            // Si el checkbox está visible en el menú actual, lo desmarcamos
+            const chk = document.querySelector(`.chk-celda[value="${celdaId}"]`);
+            if (chk) {
+                chk.checked = false;
+            }
+
+            actualizarTextoContadorCeldas();
+            renderizarMatrizCompletaAcumulada();
+        }
+
+        async function cargarLineas(proyectoId, lineaIdSelect = null) {
             const selLinea = document.getElementById('selLinea');
             const menuCeldas = document.getElementById('menuCeldas');
             const lblCeldas = document.getElementById('lblCeldasSeleccionadas');
@@ -306,7 +347,7 @@
             if (menuCeldas) menuCeldas.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:6px;">Seleccione una línea primero...</div>';
             if (lblCeldas) lblCeldas.textContent = '-- Seleccione Línea Primero --';
             if (btnToggle) btnToggle.style.display = 'none';
-            limpiarMatrizCeldas();
+            
             celdasDisponibles = [];
 
             if (!proyectoId) {
@@ -327,17 +368,19 @@
                 } else {
                     selLinea.innerHTML = '<option value="">(Sin líneas asignadas)</option>';
                 }
+
+                if (lineaIdSelect) {
+                    selLinea.value = lineaIdSelect;
+                    await cargarCeldas(lineaIdSelect);
+                }
             } catch (err) { console.error(err); }
         }
 
         async function cargarCeldas(lineaId) {
             const menuCeldas = document.getElementById('menuCeldas');
-            const lblCeldas = document.getElementById('lblCeldasSeleccionadas');
             const btnToggle = document.getElementById('btnToggleAllCeldas');
 
             if (menuCeldas) menuCeldas.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:6px;">Cargando celdas...</div>';
-            if (lblCeldas) lblCeldas.textContent = '-- Seleccione Celdas --';
-            limpiarMatrizCeldas();
             celdasDisponibles = [];
 
             if (!lineaId) {
@@ -362,14 +405,16 @@
                     menuCeldas.innerHTML = celdasDisponibles.map(item => {
                         const id = item.id || item.Id;
                         const texto = item.texto || item.Texto;
+                        const estaMarcada = asignacionesSeleccionadasMap.has(id) ? 'checked' : '';
                         return `
                             <label class="multiselect-item">
-                                <input type="checkbox" class="chk-celda" value="${id}" data-nombre="${texto}" onchange="actualizarTextoCeldas()" />
+                                <input type="checkbox" class="chk-celda" value="${id}" data-nombre="${texto}" ${estaMarcada} onchange="actualizarCeldasAcumuladas()" />
                                 <span>${texto}</span>
                             </label>
                         `;
                     }).join('');
                 }
+                actualizarTextoContadorCeldas();
             } catch (err) { console.error(err); }
         }
 
@@ -391,122 +436,214 @@
             if (checks.length === 0) return;
             const todasMarcadas = Array.from(checks).every(c => c.checked);
             checks.forEach(c => c.checked = !todasMarcadas);
-            actualizarTextoCeldas();
+            actualizarCeldasAcumuladas();
         }
 
-        function actualizarTextoCeldas() {
-            const seleccionadas = Array.from(document.querySelectorAll('.chk-celda:checked'));
+        function actualizarTextoContadorCeldas() {
+            const totalAcumuladas = asignacionesSeleccionadasMap.size;
             const lbl = document.getElementById('lblCeldasSeleccionadas');
-            const hdnCelda = document.getElementById('hdnCeldaIdUnica');
-
-            if (seleccionadas.length === 0) {
-                if (lbl) lbl.textContent = '-- Seleccione Celdas --';
-                if (hdnCelda) hdnCelda.value = '';
-                limpiarMatrizCeldas();
-            } else if (seleccionadas.length === 1) {
-                if (lbl) lbl.textContent = seleccionadas[0].dataset.nombre;
-                if (hdnCelda) hdnCelda.value = seleccionadas[0].value;
-                cargarPartesMultiples([parseInt(seleccionadas[0].value)]);
-            } else {
-                if (lbl) lbl.textContent = `${seleccionadas.length} celdas seleccionadas`;
-                if (hdnCelda) hdnCelda.value = seleccionadas[0].value;
-                const celdaIds = seleccionadas.map(c => parseInt(c.value));
-                cargarPartesMultiples(celdaIds);
+            if (lbl) {
+                if (totalAcumuladas === 0) lbl.textContent = '-- Seleccione Celdas --';
+                else if (totalAcumuladas === 1) lbl.textContent = '1 celda seleccionada (acumulada)';
+                else lbl.textContent = `${totalAcumuladas} celdas seleccionadas (acumuladas)`;
             }
         }
 
-        function limpiarMatrizCeldas() {
-            const contenedor = document.getElementById('listaFilasCeldas');
-            const msgVacio = document.getElementById('msgSinCeldas');
-            if (contenedor) contenedor.innerHTML = '';
-            if (msgVacio) msgVacio.style.display = 'flex';
+        async function actualizarCeldasAcumuladas() {
+            document.querySelectorAll('.item-celda-config').forEach(fila => {
+                const cId = parseInt(fila.dataset.celdaId);
+                if (asignacionesSeleccionadasMap.has(cId)) {
+                    const obj = asignacionesSeleccionadasMap.get(cId);
+                    obj.parteSeleccionadaId = parseInt(fila.querySelector('.sel-parte-individual')?.value || 0);
+                    obj.cantidad = fila.querySelector('.txt-cantidad-individual')?.value || '';
+                }
+            });
+
+            const checksActuales = document.querySelectorAll('.chk-celda');
+            for (const chk of checksActuales) {
+                const cId = parseInt(chk.value);
+                const cNombre = chk.dataset.nombre;
+                if (chk.checked) {
+                    if (!asignacionesSeleccionadasMap.has(cId)) {
+                        asignacionesSeleccionadasMap.set(cId, {
+                            celdaId: cId,
+                            cNombre: cNombre,
+                            partes: [],
+                            parteSeleccionadaId: 0,
+                            cantidad: ''
+                        });
+                    }
+                } else {
+                    asignacionesSeleccionadasMap.delete(cId);
+                }
+            }
+
+            actualizarTextoContadorCeldas();
+            await renderizarMatrizCompletaAcumulada();
         }
 
-        async function cargarPartesMultiples(celdaIds) {
+        // FUNCIÓN NUEVA: Al hacer clic en la tarjeta de abajo, autoselecciona arriba su proyecto y línea correspondiente
+        async function enfocarCeldaEnFiltros(celdaId) {
+            try {
+                const resp = await fetch(`/Programacion/ObtenerJerarquiaPorCelda?celdaId=${celdaId}`);
+                if (!resp.ok) return;
+                const data = await resp.json();
+
+                // 1. Seleccionar el proyecto arriba y disparar la carga de sus líneas
+                const selProyecto = document.getElementById('selProyecto');
+                if (selProyecto) {
+                    selProyecto.value = data.proyectoId;
+                    await cargarLineas(data.proyectoId, data.lineaId);
+                }
+
+                mostrarToast('Enfoque Aplicado', 'Se cargó automáticamente el proyecto y la línea de este Workcenter.', 'success');
+            } catch (err) {
+                console.error("Error al enfocar jerarquía:", err);
+            }
+        }
+
+        async function renderizarMatrizCompletaAcumulada() {
             const contenedor = document.getElementById('listaFilasCeldas');
             const msgVacio = document.getElementById('msgSinCeldas');
             if (!contenedor) return;
 
-            contenedor.innerHTML = '';
-            if (!celdaIds || celdaIds.length === 0) {
+            if (asignacionesSeleccionadasMap.size === 0) {
+                contenedor.innerHTML = '';
                 if (msgVacio) msgVacio.style.display = 'flex';
                 return;
             }
 
             if (msgVacio) msgVacio.style.display = 'none';
-            contenedor.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:6px;">Consultando partes compatibles...</div>';
 
-            try {
-                const query = celdaIds.map(id => `celdaIds=${id}`).join('&');
-                const resp = await fetch(`/Programacion/ObtenerPartesPorCeldas?${query}`);
-                const partes = await resp.json();
+            const celdasPorConsultar = [];
+            for (let [cId, obj] of asignacionesSeleccionadasMap.entries()) {
+                if (!obj.partes || obj.partes.length === 0) {
+                    celdasPorConsultar.push(cId);
+                }
+            }
 
-                contenedor.innerHTML = '';
-                const partesPorCelda = {};
-                partes.forEach(p => {
-                    if (!partesPorCelda[p.celdaId]) partesPorCelda[p.celdaId] = [];
-                    partesPorCelda[p.celdaId].push(p);
-                });
+            if (celdasPorConsultar.length > 0) {
+                try {
+                    const query = celdasPorConsultar.map(id => `celdaIds=${id}`).join('&');
+                    const resp = await fetch(`/Programacion/ObtenerPartesPorCeldas?${query}`);
+                    const partesObtenidas = await resp.json();
 
-                const celdasSeleccionadas = Array.from(document.querySelectorAll('.chk-celda:checked'));
-                celdasSeleccionadas.forEach(chk => {
-                    const cId = parseInt(chk.value);
-                    const cNombre = chk.dataset.nombre;
-                    const partesDeEstaCelda = partesPorCelda[cId] || [];
+                    const partesPorCelda = {};
+                    partesObtenidas.forEach(p => {
+                        if (!partesPorCelda[p.celdaId]) partesPorCelda[p.celdaId] = [];
+                        partesPorCelda[p.celdaId].push(p);
+                    });
 
-                    let optionsHtml = '';
-                    if (partesDeEstaCelda.length > 0) {
-                        optionsHtml = partesDeEstaCelda.map((p, idx) => `<option value="${p.id}" ${idx === 0 ? 'selected' : ''}>${p.texto}</option>`).join('');
-                    } else {
-                        optionsHtml = '<option value="">(Sin partes vinculadas)</option>';
-                    }
+                    celdasPorConsultar.forEach(cId => {
+                        const obj = asignacionesSeleccionadasMap.get(cId);
+                        if (obj) {
+                            obj.partes = partesPorCelda[cId] || [];
+                            if (obj.partes.length > 0 && !obj.parteSeleccionadaId) {
+                                obj.parteSeleccionadaId = obj.partes[0].id;
+                            }
+                        }
+                    });
+                } catch (err) { console.error(err); }
+            }
 
-                    const filaHtml = `
-                        <div class="item-celda-config" data-celda-id="${cId}" 
-                             style="background:#ffffff; border:1px solid var(--border, #e2e8f0); border-radius:6px; padding:10px; display:grid; grid-template-columns:1.3fr 2fr 1fr; gap:12px; align-items:center;">
-                            <div>
-                                <span style="font-size:10px; font-weight:700; color:var(--text-muted); display:block;">WORKCENTER</span>
-                                <span style="font-size:12px; color:#2563eb; font-weight:700;">${cNombre}</span>
-                            </div>
-                            <div>
-                                <label style="font-size:10px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:2px;">NÚMERO DE PARTE *</label>
-                                <select class="form-control sel-parte-individual" style="height:34px; font-size:12px;" required ${partesDeEstaCelda.length === 0 ? 'disabled' : ''}>
-                                    ${optionsHtml}
-                                </select>
-                            </div>
-                            <div>
-                                <label style="font-size:10px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:2px;">CANTIDAD (PZS) *</label>
-                                <input type="number" min="1" class="form-control txt-cantidad-individual" placeholder="Ej. 450" required style="height:34px; font-size:12px;" />
-                            </div>
+            contenedor.innerHTML = '';
+            for (let [cId, obj] of asignacionesSeleccionadasMap.entries()) {
+                let optionsHtml = '';
+                if (obj.partes && obj.partes.length > 0) {
+                    optionsHtml = obj.partes.map(p => {
+                        const sel = (p.id === obj.parteSeleccionadaId) ? 'selected' : '';
+                        return `<option value="${p.id}" ${sel}>${p.texto}</option>`;
+                    }).join('');
+                } else {
+                    optionsHtml = '<option value="">(Sin partes vinculadas)</option>';
+                }
+
+                // TARJETA CON BOTÓN "X" Y ENLACE INTERACTIVO PARA CARGAR ARRIBA SU JERARQUÍA
+                const filaHtml = `
+                    <div class="item-celda-config" data-celda-id="${cId}" 
+                         style="background:#ffffff; border:1px solid var(--border, #e2e8f0); border-radius:6px; padding:12px 14px; position:relative; display:grid; grid-template-columns:1.3fr 2fr 1fr; gap:12px; align-items:center;">
+                        
+                        <button type="button" onclick="removerCeldaAcumulada(${cId})" 
+                                style="position:absolute; top:4px; right:8px; background:none; border:none; color:#94a3b8; font-size:16px; font-weight:bold; cursor:pointer;" 
+                                title="Quitar asignación">&times;</button>
+
+                        <div onclick="enfocarCeldaEnFiltros(${cId})" style="cursor:pointer;" title="Hacer clic para cargar su Proyecto y Línea arriba">
+                            <span style="font-size:10px; font-weight:700; color:var(--text-muted); display:block;">WORKCENTER (IR ARRIBA)</span>
+                            <span style="font-size:12px; color:#2563eb; font-weight:700; text-decoration:underline;">${obj.cNombre}</span>
                         </div>
-                    `;
-                    contenedor.insertAdjacentHTML('beforeend', filaHtml);
+                        <div>
+                            <label style="font-size:10px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:2px;">NÚMERO DE PARTE *</label>
+                            <select class="form-control sel-parte-individual" style="height:34px; font-size:12px;" required ${obj.partes.length === 0 ? 'disabled' : ''}>
+                                ${optionsHtml}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:10px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:2px;">CANTIDAD (PZS) *</label>
+                            <input type="number" min="1" class="form-control txt-cantidad-individual" placeholder="Ej. 450" value="${obj.cantidad || ''}" required style="height:34px; font-size:12px;" />
+                        </div>
+                    </div>
+                `;
+                contenedor.insertAdjacentHTML('beforeend', filaHtml);
+            }
+        }
+
+        // LÓGICA DE APERTURA Y SELECCIÓN DESDE EL CATÁLOGO DE PAROS TEMPORALES
+        function abrirSelectorParoTemporal() {
+            const tbody = document.getElementById('listaCatalogoParosModal');
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px; color:var(--text-muted);">Cargando catálogo...</td></tr>';
+            document.getElementById('modalSelectorParoOverlay').style.display = 'flex';
+
+            fetch('/Catalogos/ObtenerParosTemporalesActivos')
+                .then(r => {
+                    if (!r.ok) throw new Error('Network response was not ok');
+                    return r.json();
+                })
+                .then(data => {
+                    tbody.innerHTML = '';
+                    catalogoParosCache = data || [];
+                    renderizarTablaCatalogoParos(catalogoParosCache);
+                })
+                .catch(() => {
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px; color:var(--danger);">Error al cargar el catálogo de paros.</td></tr>';
                 });
-            } catch (err) { console.error(err); }
         }
 
-        function abrirModalParoTemporal() {
-            document.getElementById('txtDescParoTemporal').value = '';
-            document.getElementById('txtMinutosParoTemporal').value = '30';
-            document.getElementById('modalParoTemporal').style.display = 'flex';
-        }
+        function renderizarTablaCatalogoParos(paros) {
+            const tbody = document.getElementById('listaCatalogoParosModal');
+            tbody.innerHTML = '';
 
-        function cerrarModalParoTemporal() {
-            document.getElementById('modalParoTemporal').style.display = 'none';
-        }
-
-        function guardarParoTemporalLocal() {
-            const desc = document.getElementById('txtDescParoTemporal').value.trim();
-            const mins = parseInt(document.getElementById('txtMinutosParoTemporal').value) || 0;
-
-            if (!desc || mins <= 0) {
-                alert('Debe ingresar una descripción válida y una duración mayor a 0 minutos.');
+            if (paros.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px; color:var(--text-muted);">No hay paros temporales en el catálogo.</td></tr>';
                 return;
             }
 
-            parosTemporalesList.push({ descripcion: desc, duracionMinutos: mins });
-            cerrarModalParoTemporal();
+            paros.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="padding:8px;"><strong>${p.tipoParo}</strong><br/><span style="color:#64748b; font-size:11px;">${p.descripcion}</span></td>
+                    <td style="text-align:center; padding:8px;">${p.duracionMinutos} min</td>
+                    <td style="text-align:center; padding:8px;">
+                        <button type="button" class="btn btn-primary btn-sm" style="padding:2px 8px; font-size:11px;" onclick="seleccionarParoCatalogo('${p.tipoParo}', ${p.duracionMinutos})">Seleccionar</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filtrarCatalogoParos() {
+            let filtro = document.getElementById('busquedaParoCat').value.toLowerCase();
+            let filtrados = catalogoParosCache.filter(p => p.tipoParo.toLowerCase().includes(filtro) || p.descripcion.toLowerCase().includes(filtro));
+            renderizarTablaCatalogoParos(filtrados);
+        }
+
+        function seleccionarParoCatalogo(motivo, duracion) {
+            parosTemporalesList.push({ descripcion: motivo, duracionMinutos: duracion });
+            cerrarSelectorParo();
             renderizarDesgloseParosYCalcularTiempos();
+        }
+
+        function cerrarSelectorParo() {
+            document.getElementById('modalSelectorParoOverlay').style.display = 'none';
         }
 
         function eliminarParoTemporal(index) {
@@ -559,7 +696,7 @@
                         <button type="button" onclick="eliminarParoTemporal(${idx})" style="background:none; border:none; color:#dc2626; cursor:pointer; font-weight:bold; font-size:14px;" title="Quitar paro">&times;</button>
                     </li>
                 `).join('');
-                htmlParos += `<div style="font-size:11.5px; font-weight:700; color:#92400e; margin-top:4px; margin-bottom:2px;">Paros Temporales (Exclusivos de hoy):</div><ul style="margin:0 0 4px 16px; padding:0; font-size:11.5px; color:#92400e;">${listaTemp}</ul>`;
+                htmlParos += `<div style="font-size:11.5px; font-weight:700; color:#92400e; margin-top:4px; margin-bottom:2px;">Paros Temporales (Catálogo):</div><ul style="margin:0 0 4px 16px; padding:0; font-size:11.5px; color:#92400e;">${listaTemp}</ul>`;
             }
 
             if (contenedor) {
@@ -686,20 +823,38 @@
             const turnoId = selTurno ? parseInt(selTurno.value) : 0;
             if (turnoId <= 0) { mostrarToast('Turno Requerido', 'Seleccione un turno.', 'warning'); return false; }
 
-            const filasCeldas = document.querySelectorAll('.item-celda-config');
-            if (filasCeldas.length === 0) { mostrarToast('Celdas Requeridas', 'Seleccione al menos una celda.', 'warning'); return false; }
+            if (asignacionesSeleccionadasMap.size === 0) {
+                mostrarToast('Celdas Requeridas', 'Seleccione al menos una celda.', 'warning');
+                return false;
+            }
+
+            // Sincronizar los valores actuales de los inputs antes de enviar
+            document.querySelectorAll('.item-celda-config').forEach(fila => {
+                const cId = parseInt(fila.dataset.celdaId);
+                if (asignacionesSeleccionadasMap.has(cId)) {
+                    const obj = asignacionesSeleccionadasMap.get(cId);
+                    obj.parteSeleccionadaId = parseInt(fila.querySelector('.sel-parte-individual')?.value || 0);
+                    obj.cantidad = parseInt(fila.querySelector('.txt-cantidad-individual')?.value || 0);
+                }
+            });
 
             const asignaciones = [];
             let incompleto = false;
-            filasCeldas.forEach(fila => {
-                const celdaId = parseInt(fila.dataset.celdaId);
-                const parteId = parseInt(fila.querySelector('.sel-parte-individual')?.value || 0);
-                const cantidad = parseInt(fila.querySelector('.txt-cantidad-individual')?.value || 0);
-                if (!parteId || !cantidad) incompleto = true;
-                asignaciones.push({ celdaId, parteId, cantidadPiezas: cantidad });
-            });
+            for (let [cId, obj] of asignacionesSeleccionadasMap.entries()) {
+                if (!obj.parteSeleccionadaId || !obj.cantidad || obj.cantidad <= 0) {
+                    incompleto = true;
+                }
+                asignaciones.push({
+                    celdaId: cId,
+                    parteId: obj.parteSeleccionadaId,
+                    cantidadPiezas: parseInt(obj.cantidad)
+                });
+            }
 
-            if (incompleto) { mostrarToast('Incompleto', 'Complete número de parte y cantidad.', 'warning'); return false; }
+            if (incompleto) {
+                mostrarToast('Incompleto', 'Complete número de parte y cantidad válida para todas las celdas seleccionadas.', 'warning');
+                return false;
+            }
 
             const horas = parseFloat(document.getElementById('txtTiempoEstimado')?.value || 8);
             const btn = document.getElementById('btnSubmitProgramacion');
@@ -710,7 +865,7 @@
                 fechas: fechas,
                 turnoId: turnoId,
                 horasNetas: isNaN(horas) ? 8 : horas,
-                razonCambio: '', // Razón omitida/vacía
+                razonCambio: '',
                 parosTemporales: parosTemporalesList
             };
 
@@ -722,6 +877,7 @@
                 });
                 const res = await resp.json();
                 if (res.success) {
+                    // Muestra el modal de éxito pero ya NO limpia el mapa ni recarga la página
                     mostrarModalExito(res.message);
                 } else {
                     mostrarToast('Error', res.message, 'error');
@@ -734,4 +890,5 @@
             return false;
         }
     </script>
+}
 }

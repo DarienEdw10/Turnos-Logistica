@@ -33,7 +33,7 @@
 <div class="page-header">
     <div>
         <div class="page-title">Rendimiento de Producción</div>
-        <div class="page-subtitle">Balance de tiempo bruto vs. tiempo neto real y registro de paros en piso</div>
+        <div class="page-subtitle">Balance de tiempo bruto vs. tiempo neto real y registro de paros en piso (Turno 06:00 a 15:36)</div>
     </div>
     <div style="display:flex; gap:8px;">
         <a class="btn btn-secondary" asp-action="ExportarCsv" asp-route-fecha="@Model.Fecha.ToString("yyyy-MM-dd")"
@@ -73,10 +73,11 @@
     </div>
 
     <button type="submit" class="btn btn-primary btn-sm">Consultar</button>
+    <a asp-action="Index" class="btn btn-secondary btn-sm" style="text-decoration:none;display:inline-flex;align-items:center;">Limpiar</a>
 </form>
 
 <!-- CARDS DE CONSOLIDADO GENERAL DEL DÍA -->
-<div class="stats-row" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+<div class="stats-row" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
     <div class="stat-card">
         <div class="stat-label">Horas Planeadas</div>
         <div class="stat-value">@Model.TotalHorasProgramadas h</div>
@@ -84,9 +85,21 @@
     </div>
 
     <div class="stat-card">
-        <div class="stat-label" style="color:var(--danger);">Downtime / Paros</div>
-        <div class="stat-value" style="color:var(--danger);">@Model.TotalHorasParos h</div>
-        <div class="stat-sub">@Model.TotalMinutosParos min acumulados</div>
+        <div class="stat-label" style="color:var(--warning);">Paro Programado</div>
+        <div class="stat-value" style="color:var(--warning);">@((Model.Items.Sum(i => i.MinutosParoProgramados) / 60.0).ToString("N2")) h</div>
+        <div class="stat-sub">@Model.Items.Sum(i => i.MinutosParoProgramados) min acumulados</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-label" style="color:#8606db;">Paro Temporal</div>
+        <div class="stat-value" style="color:#8606db;">@((Model.Items.Sum(i => i.MinutosParoTemporales) / 60.0).ToString("N2")) h</div>
+        <div class="stat-sub">@Model.Items.Sum(i => i.MinutosParoTemporales) min acumulados</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-label" style="color:var(--danger);">Fallas / Incidencias</div>
+        <div class="stat-value" style="color:var(--danger);">@((Model.Items.Sum(i => i.MinutosParoNoProgramados) / 60.0).ToString("N2")) h</div>
+        <div class="stat-sub">@Model.Items.Sum(i => i.MinutosParoNoProgramados) min acumulados</div>
     </div>
 
     <div class="stat-card">
@@ -108,6 +121,7 @@
                     <th>No. Parte</th>
                     <th>T. Bruto</th>
                     <th>Paro Prog.</th>
+                    <th>Paro Temporal</th>
                     <th>Fallas/Incidencias</th>
                     <th>T. Efectivo</th>
                     <th style="width:100px; text-align:center;">Acción</th>
@@ -125,26 +139,16 @@
                             <td><code>@row.SapPartNumber</code></td>
                             <td>@row.HorasProgramadas.ToString("N2") h</td>
                             <td style="color:var(--warning);">@row.MinutosParoProgramados min</td>
+                            <td style="color:#8606db; font-weight:700;">@(row.MinutosParoTemporales > 0 ? $"{row.MinutosParoTemporales} min" : "—")</td>
                             <td style="color:var(--danger); font-weight:700;">@row.MinutosParoNoProgramados min</td>
                             <td><strong style="color:var(--success);">@row.HorasEfectivas.ToString("N2") h</strong></td>
 
                             <td style="text-align:center;">
-                                @if (soloLectura)
-                                {
-                                    <button type="button" class="btn btn-secondary btn-sm"
-                                            style="padding:3px 8px; font-size:11px; font-weight:600; opacity:0.5; cursor:not-allowed;"
-                                            disabled title="Modo Solo Lectura">
-                                        🔒 Solo Lectura
-                                    </button>
-                                }
-                                else
-                                {
-                                    <button type="button" class="btn btn-secondary btn-sm"
-                                            style="padding:3px 8px; font-size:11.5px; font-weight:600;"
-                                            onclick="abrirModalParos(@row.ProgramacionId, '@row.ProyectoCodigo', '@row.LineaNombre', '@row.CeldaCodigo', @row.HorasProgramadas, '@row.SapPartNumber')">
-                                        ⚙ Paros
-                                    </button>
-                                }
+                                <button type="button" class="btn btn-secondary btn-sm"
+                                        style="padding:3px 8px; font-size:11.5px; font-weight:600;"
+                                        onclick="abrirModalParos(@row.ProgramacionId, '@row.ProyectoCodigo', '@row.LineaNombre', '@row.CeldaCodigo', @row.HorasProgramadas, '@row.SapPartNumber')">
+                                    🔍 Historial
+                                </button>
                             </td>
                         </tr>
                     }
@@ -152,7 +156,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="9" style="text-align:center; padding:30px; color:var(--text-muted);">
+                        <td colspan="10" style="text-align:center; padding:30px; color:var(--text-muted);">
                             No hay órdenes de producción programadas para esta fecha o filtros seleccionados.
                         </td>
                     </tr>
@@ -162,33 +166,19 @@
     </div>
 </div>
 
-<!-- CONTENEDOR FLOTANTE PARA MENSAJES TOAST -->
-<div id="toastNotificacion"
-     style="display:none; position:fixed; top:24px; right:24px; z-index:9999; min-width:320px; padding:14px 18px; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,0.25); font-size:13px; font-weight:600; align-items:center; gap:10px; transition: all 0.3s ease;">
-    <span id="toastIcono" style="font-size:18px;"></span>
-    <span id="toastMensaje"></span>
-</div>
-
-<!-- MODAL DE GESTIÓN DE PAROS E INCIDENCIAS -->
+<!-- MODAL DE CONSULTA DE HISTORIAL DE PAROS -->
 <div id="modalParosOverlay"
      style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:300; align-items:center; justify-content:center; padding:16px;">
     <div style="background:var(--surface); border-radius:12px; padding:24px; width:100%; max-width:640px; max-height:92vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
 
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">
             <div>
-                <h3 id="modalProgTitulo" style="font-size:16px; font-weight:700; margin:0; color:var(--text);">Registro de Incidencias / Paros</h3>
+                <h3 id="modalProgTitulo" style="font-size:16px; font-weight:700; margin:0; color:var(--text);">Historial de Incidencias / Paros</h3>
                 <span id="modalProgSubtitulo" style="font-size:12px; color:var(--text-muted);">Proyecto - Línea / Celda</span>
             </div>
             <button type="button" onclick="cerrarModalParos()"
                     style="background:none; border:none; font-size:22px; cursor:pointer; color:var(--text-muted);">&times;</button>
         </div>
-
-        @if (soloLectura)
-        {
-            <div style="background:#fffbeb; border:1px solid #fde68a; color:#92400e; padding:8px 12px; border-radius:6px; font-size:12px; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
-                <span>🔒 <strong>Modo Solo Lectura:</strong> Te encuentras visualizando una planta distinta a tu planta base.</span>
-            </div>
-        }
 
         <!-- Ficha Resumen de Tiempos -->
         <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:14px; background:var(--surface2); padding:12px; border-radius:8px;">
@@ -206,55 +196,29 @@
             </div>
         </div>
 
-        <form id="formParosProyecto" onsubmit="guardarAuditoriaProyecto(event)">
-            <input type="hidden" id="modalProgId" name="programacionId" value="0" />
+        <div class="table-wrap">
+            <table style="font-size:12px;">
+                <thead>
+                    <tr style="background:var(--surface2);">
+                        <th>Motivo / Razón</th>
+                        <th style="width:105px;">Duración (min)</th>
+                        <th style="width:160px;">Categoría / Tipo</th>
+                    </tr>
+                </thead>
+                <tbody id="listaParosProyectoBody">
+                    <!-- Filas dinámicas -->
+                </tbody>
+            </table>
+        </div>
 
-            <div style="margin-bottom:16px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <label style="font-size:11px; font-weight:700; color:var(--text-muted); margin:0;">INCIDENCIAS / PAROS REGISTRADOS</label>
-                    @if (!soloLectura)
-                    {
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="agregarFilaParoProyecto()">+ Agregar Paro</button>
-                    }
-                </div>
-
-                <div class="table-wrap">
-                    <table style="font-size:12px;">
-                        <thead>
-                            <tr style="background:var(--surface2);">
-                                <th>Motivo / Razón</th>
-                                <th style="width:105px;">Duración (min)</th>
-                                <th style="width:150px;">Categoría / Tipo</th>
-                                <th style="width:40px;"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="listaParosProyectoBody">
-                            <!-- Filas dinámicas -->
-                        </tbody>
-                    </table>
-                </div>
-
-                <div id="alertaExcesoModal"
-                     style="display:none; color:var(--danger); font-size:11.5px; font-weight:700; margin-top:8px;">
-                    ⚠ Los paros no pueden superar el tiempo total programado del turno.
-                </div>
-            </div>
-
-            <div style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--border); padding-top:14px;">
-                <button type="button" class="btn btn-secondary" onclick="cerrarModalParos()">Cerrar</button>
-                @if (!soloLectura)
-                {
-                    <button type="submit" id="btnGuardarParosProg" class="btn btn-primary">Guardar Paros</button>
-                }
-            </div>
-        </form>
+        <div style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--border); padding-top:14px; margin-top:16px;">
+            <button type="button" class="btn btn-secondary" onclick="cerrarModalParos()">Cerrar</button>
+        </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        const esSoloLectura = @(soloLectura ? "true" : "false");
-        let indexParoProg = 0;
         let horasProgActuales = 0;
 
         function cerrarModalParos() {
@@ -262,76 +226,57 @@
         }
 
         function abrirModalParos(id, proyecto, linea, celda, horas, parte = '') {
-            document.getElementById('modalProgId').value = id;
-            document.getElementById('modalProgTitulo').innerText = `${proyecto} ${parte ? '— ' + parte : ''}`;
+            document.getElementById('modalProgTitulo').innerText = `Historial — ${proyecto} ${parte ? '— ' + parte : ''}`;
             document.getElementById('modalProgSubtitulo').innerText = `${linea} / ${celda} — ${horas} hrs planeadas`;
 
             horasProgActuales = parseFloat(horas) || 0;
             document.getElementById('lblModalHorasProg').innerText = `${horasProgActuales.toFixed(2)} h`;
 
             const tbody = document.getElementById('listaParosProyectoBody');
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:10px; color:var(--text-muted);">Cargando incidencias...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:10px; color:var(--text-muted);">Cargando historial...</td></tr>';
             document.getElementById('modalParosOverlay').style.display = 'flex';
 
             fetch(`/Calendario/ObtenerParosProgramacion?programacionId=${id}`)
                 .then(r => r.json())
                 .then(data => {
                     tbody.innerHTML = '';
-                    indexParoProg = 0;
                     if (data && data.length > 0) {
                         data.forEach(p => {
-                            // Soportamos categoriaParo (1=Base, 2=Temporal, 3=Imprevisto) o el booleano heredado
-                            let cat = p.categoriaParo !== undefined ? p.categoriaParo : (p.esProgramado ? 1 : 3);
-                            agregarFilaParoProyecto(p.tipoParo, p.duracionMinutos, cat, p.id);
+                            let cat = parseInt(p.categoriaParo, 10) || 1;
+                            let motivo = p.descripcion || p.tipoParo;
+                            agregarFilaHistorial(motivo, p.duracionMinutos, cat);
                         });
                     } else {
-                        tbody.innerHTML = '<tr id="filaSinParos"><td colspan="4" style="text-align:center; padding:12px; color:var(--text-muted); font-size:11.5px;">Sin paros registrados.</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px; color:var(--text-muted);">Sin paros o incidencias registradas en este turno.</td></tr>';
                     }
                     recalcularTiemposModal();
                 })
                 .catch(() => {
-                    tbody.innerHTML = '<tr id="filaSinParos"><td colspan="4" style="text-align:center; padding:12px; color:var(--text-muted); font-size:11.5px;">Sin paros registrados.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px; color:var(--text-muted);">Error al cargar el historial.</td></tr>';
                     recalcularTiemposModal();
                 });
         }
 
-        function agregarFilaParoProyecto(motivo = '', minutos = 15, categoriaParo = 1, paroId = 0) {
+        function agregarFilaHistorial(motivo, minutos, categoriaParo) {
             const tbody = document.getElementById('listaParosProyectoBody');
-            const filaVacia = document.getElementById('filaSinParos');
-            if (filaVacia) filaVacia.remove();
+            
+            let badgeTipo = '';
+            if (categoriaParo === 1) badgeTipo = '<span style="color:#2563eb; font-weight:700;">🔵 Base / Turno</span>';
+            else if (categoriaParo === 2) badgeTipo = '<span style="color:#d97706; font-weight:700;">🟠 Temporal (Día)</span>';
+            else badgeTipo = '<span style="color:#dc2626; font-weight:700;">🔴 No Prog. (Falla)</span>';
 
-            const disabledAttr = esSoloLectura ? 'disabled' : '';
             const tr = document.createElement('tr');
             tr.className = 'fila-paro-prog';
             tr.innerHTML = `
                 <td>
-                    <input type="hidden" class="p-id" value="${paroId}" />
-                    <input type="text" class="form-control form-control-sm p-motivo" placeholder="Ej. Falla de soldadora / Mantenimiento" value="${motivo}" required ${disabledAttr} style="padding:4px 8px; font-size:12px; width:100%;" />
+                    <input type="text" class="form-control form-control-sm p-motivo" value="${motivo}" disabled style="background:var(--surface2); border:none; width:100%;" />
                 </td>
                 <td>
-                    <input type="number" class="form-control form-control-sm p-minutos" min="1" value="${minutos}" 
-                           oninput="recalcularTiemposModal()" onchange="recalcularTiemposModal()" required ${disabledAttr} style="padding:4px 8px; font-size:12px; width:100%;" />
+                    <input type="number" class="form-control form-control-sm p-minutos" value="${minutos}" disabled style="background:var(--surface2); border:none; width:100%;" />
                 </td>
-                <td>
-                    <select class="form-select form-select-sm p-categoria" ${disabledAttr} style="padding:4px 8px; font-size:12px; width:100%;">
-                        <option value="1" ${categoriaParo == 1 ? 'selected' : ''}>🔵 Base / Turno</option>
-                        <option value="2" ${categoriaParo == 2 ? 'selected' : ''}>🟠 Temporal (Día)</option>
-                        <option value="3" ${categoriaParo == 3 ? 'selected' : ''}>🔴 No Prog. (Falla)</option>
-                    </select>
-                </td>
-                <td style="text-align:center;">
-                    ${!esSoloLectura ? '<button type="button" class="btn btn-danger btn-sm" style="padding:2px 6px; font-size:11px;" onclick="eliminarFilaParoProyecto(this)">✕</button>' : ''}
-                </td>
+                <td>${badgeTipo}</td>
             `;
             tbody.appendChild(tr);
-            indexParoProg++;
-            recalcularTiemposModal();
-        }
-
-        function eliminarFilaParoProyecto(btn) {
-            if (esSoloLectura) return;
-            btn.closest('tr').remove();
-            recalcularTiemposModal();
         }
 
         function recalcularTiemposModal() {
@@ -347,8 +292,6 @@
             });
 
             let tiempoNetoMinutos = minutosTotalesProg - totalParoMinutos;
-            let alerta = document.getElementById('alertaExcesoModal');
-            let btnGuardar = document.getElementById('btnGuardarParosProg');
             let lblTiempo = document.getElementById('lblModalTiempoNeto');
             let lblParos = document.getElementById('lblModalTotalParos');
 
@@ -356,111 +299,14 @@
                 lblParos.innerText = `${totalParoMinutos} min (${(totalParoMinutos / 60).toFixed(2)} h)`;
             }
 
-            if (tiempoNetoMinutos < 0) {
-                if (alerta) alerta.style.display = 'block';
-                if (btnGuardar && !esSoloLectura) btnGuardar.disabled = true;
-                if (lblTiempo) {
-                    lblTiempo.style.color = 'var(--danger)';
-                    lblTiempo.innerText = '0.00 h (Excedido)';
-                }
-            } else {
-                if (alerta) alerta.style.display = 'none';
-                if (btnGuardar && !esSoloLectura) btnGuardar.disabled = false;
+            let horasDecimal = Math.max(0, tiempoNetoMinutos) / 60;
+            let hEnteras = Math.floor(Math.max(0, tiempoNetoMinutos) / 60);
+            let mRestantes = Math.max(0, tiempoNetoMinutos) % 60;
 
-                let horasDecimal = tiempoNetoMinutos / 60;
-                let hEnteras = Math.floor(tiempoNetoMinutos / 60);
-                let mRestantes = tiempoNetoMinutos % 60;
-
-                if (lblTiempo) {
-                    lblTiempo.style.color = 'var(--success)';
-                    lblTiempo.innerText = `${horasDecimal.toFixed(2)} h (${hEnteras}h ${mRestantes}m)`;
-                }
+            if (lblTiempo) {
+                lblTiempo.style.color = 'var(--success)';
+                lblTiempo.innerText = `${horasDecimal.toFixed(2)} h (${hEnteras}h ${mRestantes}m)`;
             }
-        }
-
-        function mostrarToast(mensaje, esExito = true) {
-            const toast = document.getElementById('toastNotificacion');
-            const icono = document.getElementById('toastIcono');
-            const texto = document.getElementById('toastMensaje');
-
-            if (!toast) return;
-
-            if (esExito) {
-                toast.style.background = '#16a34a';
-                toast.style.color = '#ffffff';
-                toast.style.border = '1px solid #15803d';
-                icono.innerText = '✓';
-            } else {
-                toast.style.background = '#dc2626';
-                toast.style.color = '#ffffff';
-                toast.style.border = '1px solid #b91c1c';
-                icono.innerText = '✕';
-            }
-
-            texto.innerText = mensaje;
-            toast.style.display = 'flex';
-            toast.style.opacity = '1';
-
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                setTimeout(() => { toast.style.display = 'none'; }, 300);
-            }, 3500);
-        }
-
-        function guardarAuditoriaProyecto(e) {
-            e.preventDefault();
-
-            if (esSoloLectura) {
-                mostrarToast('Operación bloqueada: Solo tienes permisos de consulta en esta planta.', false);
-                return;
-            }
-
-            const btnGuardar = document.getElementById('btnGuardarParosProg');
-            const textoOriginal = btnGuardar.innerText;
-            btnGuardar.disabled = true;
-            btnGuardar.innerText = 'Guardando...';
-
-            const programacionId = parseInt(document.getElementById('modalProgId').value);
-
-            let paros = [];
-            document.querySelectorAll('.fila-paro-prog').forEach(row => {
-                let catVal = parseInt(row.querySelector('.p-categoria').value) || 1;
-                paros.push({
-                    id: parseInt(row.querySelector('.p-id').value) || 0,
-                    programacionId: programacionId,
-                    tipoParo: row.querySelector('.p-motivo').value,
-                    duracionMinutos: parseInt(row.querySelector('.p-minutos').value) || 0,
-                    categoriaParo: catVal,
-                    esProgramado: catVal !== 3 // Retrocompatibilidad booleana
-                });
-            });
-
-            fetch('/Calendario/GuardarParosProgramacion', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ programacionId: programacionId, paros: paros })
-            })
-            .then(r => {
-                if (r.status === 403) throw new Error('Modo Solo Lectura: Acción denegada para plantas foráneas.');
-                return r.json();
-            })
-            .then(resParos => {
-                if (!resParos.success) {
-                    throw new Error(resParos.message || 'No se pudieron registrar las incidencias.');
-                }
-
-                cerrarModalParos();
-                mostrarToast('Incidencias y paros guardados correctamente.', true);
-
-                setTimeout(() => {
-                    location.reload();
-                }, 1200);
-            })
-            .catch(err => {
-                btnGuardar.disabled = false;
-                btnGuardar.innerText = textoOriginal;
-                mostrarToast(err.message || 'Ocurrió un error al intentar guardar los cambios.', false);
-            });
         }
     </script>
 }

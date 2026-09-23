@@ -72,22 +72,35 @@ public class CalendarioController : Controller
 [HttpGet]
     public async Task<IActionResult> ObtenerParosProgramacion(long programacionId)
     {
+        var prog = await _context.Programaciones
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == programacionId);
+
+        if (prog == null)
+            return Json(new List<object>());
+
+        // Traemos tanto los paros específicos de esta programación (temporales y fallas) 
+        // como los paros base generales configurados para el turno de esta orden (TurnoId sin ProgramacionId)
         var paros = await _context.TurnoParos
-            .Where(p => p.ProgramacionId == programacionId && p.Activo)
+            .AsNoTracking()
+            .Where(p => p.Activo && (
+                p.ProgramacionId == programacionId || 
+                (p.TurnoId == prog.TurnoId && p.ProgramacionId == null)
+            ))
             .Select(p => new
             {
                 id = p.Id,
                 tipoParo = p.TipoParo,
+                descripcion = p.Descripcion ?? p.TipoParo,
                 duracionMinutos = p.DuracionMinutos,
-                esProgramado = p.EsProgramado,
-                categoriaParo = p.CategoriaParo // <-- NUEVO: Retorna la categoría (1, 2 o 3)
+                categoriaParo = p.CategoriaParo > 0 ? p.CategoriaParo : (p.ProgramacionId == null ? (byte)1 : (byte)3)
             })
             .ToListAsync();
 
         return Json(paros);
     }
 
-    [HttpPost]
+[HttpPost]
     public async Task<IActionResult> GuardarParosProgramacion([FromBody] GuardarParosDto dto)
     {
         if (dto == null || dto.ProgramacionId <= 0)
@@ -99,32 +112,106 @@ public class CalendarioController : Controller
 
         int? turnoIdAsociado = prog?.TurnoId;
 
-        var parosActuales = await _context.TurnoParos
-            .Where(p => p.ProgramacionId == dto.ProgramacionId)
+        // Traemos los paros que ya existían previamente en la base de datos para esta programación
+        var parosExistentes = await _context.TurnoParos
+            .Where(p => p.ProgramacionId == dto.ProgramacionId && p.Activo)
             .ToListAsync();
-
-        _context.TurnoParos.RemoveRange(parosActuales);
 
         if (dto.Paros != null && dto.Paros.Any())
         {
             foreach (var p in dto.Paros)
             {
-                _context.TurnoParos.Add(new TurnoParo
+                if (p.Id > 0)
                 {
-                    ProgramacionId = dto.ProgramacionId,
-                    TurnoId = turnoIdAsociado,
-                    TipoParo = p.TipoParo,
-                    Descripcion = string.IsNullOrWhiteSpace(p.Descripcion) ? p.TipoParo : p.Descripcion,
-                    DuracionMinutos = p.DuracionMinutos,
-                    EsProgramado = p.EsProgramado,
-                    CategoriaParo = p.CategoriaParo > 0 ? p.CategoriaParo : (p.EsProgramado ? (byte)1 : (byte)3), // <-- Guarda la categoría seleccionada (1, 2 o 3)
-                    Activo = true
-                });
+                    var paroDb = parosExistentes.FirstOrDefault(x => x.Id == p.Id);
+                    if (paroDb != null)
+                    {
+                        // Mantenemos sus valores históricos intactos
+                        continue; 
+                    }
+                }
+                else
+                {
+                    // Si el ID es 0, significa que es una incidencia NUEVA que el usuario acaba de agregar en el modal
+                    byte cat = p.CategoriaParo > 0 ? p.CategoriaParo : (byte)3;
+                    bool esProgReal = (cat == 1 || cat == 2);
+
+                    string tipoParoTexto = cat switch
+                    {
+                        1 => "Base / Turno",
+                        2 => "Temporal (Día)",
+                        3 => "No Programado (Falla)",
+                        _ => "No Programado (Falla)"
+                    };
+
+                    _context.TurnoParos.Add(new TurnoParo
+                    {
+                        ProgramacionId = dto.ProgramacionId,
+                        TurnoId = turnoIdAsociado,
+                        TipoParo = tipoParoTexto,
+                        Descripcion = string.IsNullOrWhiteSpace(p.TipoParo) ? tipoParoTexto : p.TipoParo,
+                        DuracionMinutos = p.DuracionMinutos,
+                        EsProgramado = esProgReal,
+                        CategoriaParo = cat,
+                        Activo = true
+                    });
+                }
             }
         }
 
         await _context.SaveChangesAsync();
         return Json(new { success = true });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ObtenerTodasCeldasPlanta()
+    {
+        int pId = ObtenerPlantaActivaId();
+        
+        var celdas = await (from c in _context.Celdas
+                            join l in _context.Lineas on c.LineaId equals l.Id
+                            where c.Activa && l.PlantaId == pId && l.Activa
+                            orderby c.Codigo
+                            select new { id = c.Id, texto = c.Codigo })
+                           .Distinct()
+                           .ToListAsync();
+
+        return Json(celdas);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ObtenerCeldasPorLineaNombre(string lineaNombre)
+    {
+        if (string.IsNullOrWhiteSpace(lineaNombre) || lineaNombre == "Todas")
+        {
+            return await ObtenerTodasCeldasPlanta();
+        }
+
+        int pId = ObtenerPlantaActivaId();
+        bool esIdNumerico = int.TryParse(lineaNombre, out int lineaIdParsed);
+
+        var query = from c in _context.Celdas
+                    join l in _context.Lineas on c.LineaId equals l.Id
+                    where c.Activa && l.PlantaId == pId && l.Activa
+                    select new { Celda = c, Linea = l };
+
+        if (esIdNumerico)
+        {
+            query = query.Where(x => x.Celda.LineaId == lineaIdParsed);
+        }
+        else
+        {
+            string termino = lineaNombre.Trim().ToLower();
+            query = query.Where(x => x.Linea.Nombre.ToLower().Contains(termino) || x.Linea.Codigo.ToLower().Contains(termino));
+        }
+
+        var celdas = await query
+            .OrderBy(x => x.Celda.Codigo)
+            .Select(x => new { id = x.Celda.Id, texto = x.Celda.Codigo })
+            .Distinct()
+            .ToListAsync();
+
+        return Json(celdas);
     }
 
     public class GuardarParosDto
@@ -140,6 +227,6 @@ public class CalendarioController : Controller
         public string? Descripcion { get; set; }
         public int DuracionMinutos { get; set; }
         public bool EsProgramado { get; set; }
-        public byte CategoriaParo { get; set; } // <-- NUEVO: Recibe 1 (Base), 2 (Temporal) o 3 (Imprevisto)
+        public byte CategoriaParo { get; set; }
     }
 }

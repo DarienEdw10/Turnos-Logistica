@@ -20,6 +20,7 @@ public class AppDbContext : DbContext
     public DbSet<HistorialAgenda> HistorialAgendas => Set<HistorialAgenda>();
     public DbSet<InventarioDiario> InventariosDiarios => Set<InventarioDiario>();
 
+    
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

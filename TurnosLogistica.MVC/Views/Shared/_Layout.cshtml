@@ -241,7 +241,7 @@
             @if (nivelJerarquico >= 15)
             {
                 <a class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Programacion" ? "active" : "")"
-                   asp-controller="Programacion" asp-action="Index">
+                    asp-controller="Programacion" asp-action="Index">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z" />
                     </svg>
@@ -249,10 +249,12 @@
                 </a>
             }
 
-            <!-- 3. CATÁLOGOS (Nivel >= 20: jefe_log, admin, sistemas) -->
+            <!-- 3. CATÁLOGOS (Controlados por permisos específicos) -->
+            <div class="nav-section-label" style="margin-top:8px">Catálogos</div>
+            
+            <!-- Maestro de Partes (Nivel >= 20) -->
             @if (nivelJerarquico >= 20)
             {
-                <div class="nav-section-label" style="margin-top:8px">Catálogos</div>
                 <a class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Partes" ? "active" : "")"
                    asp-controller="Partes" asp-action="Index">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -260,6 +262,11 @@
                     </svg>
                     Maestro de Partes
                 </a>
+            }
+
+            <!-- Gestión de Turnos (Visible para Nivel >= 15 o si es personal de sistemas) -->
+            @if (nivelJerarquico >= 15 || esPersonalSistemas)
+            {
                 <a class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Turnos" ? "active" : "")"
                    asp-controller="Turnos" asp-action="Index">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -267,6 +274,23 @@
                     </svg>
                     Gestión de Turnos
                 </a>
+            }
+
+            <!-- Paros Temporales (Visible a partir de Nivel 15: Programador de Logística en adelante) -->
+            @if (nivelJerarquico >= 15)
+            {
+                <a class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Catalogos" && ViewContext.RouteData.Values["Action"]?.ToString() == "ParosTemporales" ? "active" : "")"
+                   asp-controller="Catalogos" asp-action="ParosTemporales">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
+                    </svg>
+                    Paros Temporales
+                </a>
+            }
+
+            <!-- Gestión de Estructura (Nivel >= 20) -->
+            @if (nivelJerarquico >= 20)
+            {
                 <a class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Estructura" ? "active" : "")"
                    asp-controller="Estructura" asp-action="Index">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -291,7 +315,7 @@
                 <div class="nav-section-label" style="margin-top:8px">Administración</div>
                 
                 <a class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Usuarios" ? "active" : "")"
-                   asp-controller="Usuarios" asp-action="Index">
+                    asp-controller="Usuarios" asp-action="Index">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
                     </svg>
@@ -302,7 +326,7 @@
                 @if (nivelJerarquico >= 30)
                 {
                     <a class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Auditoria" ? "active" : "")"
-                       asp-controller="Auditoria" asp-action="Index">
+                        asp-controller="Auditoria" asp-action="Index">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M13 9h-2V7h2m0 10h-2v-6h2m-1-9A10 10 0 002 12a10 10 0 0010 10 10 10 0 0010-10A10 10 0 0012 2z" />
                         </svg>
@@ -327,7 +351,7 @@
                             @if (esPersonalSistemas)
                             {
                                 <span>
-                                    <strong>Modo Soporte Técnico (Sistemas):</strong> Tu planta base es <strong>@plantaAsignadaNombre</strong>. Cualquier operación realizada en <strong>@plantaActivaNombre</strong> Apoyo inter-planta por parte del equipo de sistemas.
+                                    <strong>Modo Soporte Técnico (Sistemas):</strong> Tu planta base es <strong>@plantaAsignadaNombre</strong>. Cualquier operación realizada en <strong>@plantaActivaNombre</strong> Es apoyo inter-planta por parte del equipo de sistemas.
                                 </span>
                             }
                             else

@@ -14,11 +14,12 @@ public class RendimientoTurnoViewModel
     // Registros detallados por proyecto / celda
     public List<RendimientoItemViewModel> Items { get; set; } = new();
 
-    // Tarjetas de resumen consolidado
+    // Tarjetas de resumen consolidado con Paro Temporal incluido
     public double TotalHorasProgramadas => Math.Round(Items.Sum(i => i.HorasProgramadas), 2);
     public int TotalMinutosParoProg => Items.Sum(i => i.MinutosParoProgramados);
+    public int TotalMinutosParoTemp => Items.Sum(i => i.MinutosParoTemporales); // <-- Agregado
     public int TotalMinutosParoNoProg => Items.Sum(i => i.MinutosParoNoProgramados);
-    public int TotalMinutosParos => TotalMinutosParoProg + TotalMinutosParoNoProg;
+    public int TotalMinutosParos => TotalMinutosParoProg + TotalMinutosParoTemp + TotalMinutosParoNoProg; // <-- Incluye temporal
     public double TotalHorasParos => Math.Round(TotalMinutosParos / 60.0, 2);
     public double TotalHorasEfectivas => Math.Round(Items.Sum(i => i.HorasEfectivas), 2);
 
@@ -40,8 +41,13 @@ public class RendimientoItemViewModel
 
     public double HorasProgramadas { get; set; }
     public int MinutosParoProgramados { get; set; }
-    public int MinutosParoNoProgramados { get; set; }
-    public int TotalMinutosParo => MinutosParoProgramados + MinutosParoNoProgramados;
+    public int MinutosParoTemporales { get; set; } // Declarado antes para que entre en los cálculos
+    public int MinutosParoNoProgramados { get; set; } // (Nota: asegúrate de tener int, no int5)
+
+    // Suma correcta incluyendo las tres categorías de paros
+    public int TotalMinutosParo => MinutosParoProgramados + MinutosParoTemporales + MinutosParoNoProgramados;
+    
+    // Resta exacta del tiempo bruto menos todos los paros registrados
     public double HorasEfectivas => Math.Max(0, Math.Round(HorasProgramadas - (TotalMinutosParo / 60.0), 2));
 
     public int PiezasProgramadas { get; set; }

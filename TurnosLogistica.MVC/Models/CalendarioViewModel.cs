@@ -36,4 +36,6 @@ public class EventoCalendarioDto
     public string EstadoCss { get; set; } = "pendiente";
     public double Horas { get; set; } = 8.0;
     public int Cantidad { get; set; } = 0; // <--- Agrega esta propiedad
+    public bool TieneParosTemporales { get; set; }
+    public string Descripcion { get; set; } = string.Empty;
 }

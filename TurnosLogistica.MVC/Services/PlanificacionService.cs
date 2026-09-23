@@ -68,15 +68,15 @@ public class PlanificacionService : IPlanificacionService
     public async Task<IEnumerable<NumeroDeParte>> ObtenerMaestroPartesAsync(int plantaId) =>
         await _parteRepo.FindAsync(p => p.PlantaId == plantaId && p.Activo);
 
-    public async Task<CalendarioViewModel> ObtenerCalendarioAsync(
-      int plantaId,
-      string agrupacion,
-      string granularidad,
-      int mes,
-      int anio,
-      string? filtroLinea = null,
-      string? filtroCelda = null,
-      string? filtroTurno = null)
+public async Task<CalendarioViewModel> ObtenerCalendarioAsync(
+        int plantaId,
+        string agrupacion,
+        string granularidad,
+        int mes,
+        int anio,
+        string? filtroLinea = null,
+        string? filtroCelda = null,
+        string? filtroTurno = null)
     {
         // 1. Determinar el rango de fechas según granularidad
         DateTime fechaInicio;
@@ -100,7 +100,7 @@ public class PlanificacionService : IPlanificacionService
             fechaFin = fechaInicio.AddMonths(1);
         }
 
-        // 2. Consulta proyectada a BD con horas de inicio y fin del turno
+        // 2. Consulta proyectada a BD con horas de inicio, fin y descripción de la parte
         var rawQuery = from prog in _context.Programaciones
                        join parte in _context.NumerosDeParte on prog.NumeroParteId equals parte.Id
                        join turno in _context.Turnos on prog.TurnoId equals turno.Id
@@ -120,6 +120,7 @@ public class PlanificacionService : IPlanificacionService
                            LineaNombre = linea != null ? linea.Codigo : "L.A-1",
                            CeldaCodigo = celda != null ? celda.Codigo : "C-101",
                            parte.SapPartNumber,
+                           DescripcionParte = parte.Descripcion ?? string.Empty, // <--- SE AGREGA LA DESCRIPCIÓN AQUÍ
                            TurnoNombre = turno.Nombre,
                            TurnoHoraInicio = turno.HoraInicio,
                            TurnoHoraFin = turno.HoraFin,
@@ -158,6 +159,7 @@ public class PlanificacionService : IPlanificacionService
                         LineaNombre = $"{g.Select(x => x.LineaNombre).Distinct().Count()} Líneas",
                         CeldaCodigo = $"{g.Select(x => x.CeldaCodigo).Distinct().Count()} Celdas",
                         SapPartNumber = $"{g.Count()} Partes",
+                        Descripcion = $"{g.Count()} Componentes agrupar", // Descripción resumida o combinada
                         TurnoClave = g.Key.TurnoNombre,
                         Estado = estadoTexto,
                         EstadoCss = estadoCss,
@@ -182,6 +184,7 @@ public class PlanificacionService : IPlanificacionService
                         LineaNombre = g.Key.LineaNombre,
                         CeldaCodigo = $"{g.Select(x => x.CeldaCodigo).Distinct().Count()} Celdas",
                         SapPartNumber = $"{g.Count()} Partes",
+                        Descripcion = $"{g.Count()} Componentes",
                         TurnoClave = g.Key.TurnoNombre,
                         Estado = estadoTexto,
                         EstadoCss = estadoCss,
@@ -206,6 +209,7 @@ public class PlanificacionService : IPlanificacionService
                         LineaNombre = g.Key.LineaNombre,
                         CeldaCodigo = g.Key.CeldaCodigo,
                         SapPartNumber = $"{g.Count()} Partes",
+                        Descripcion = $"{g.Count()} Componentes",
                         TurnoClave = g.Key.TurnoNombre,
                         Estado = estadoTexto,
                         EstadoCss = estadoCss,
@@ -228,6 +232,7 @@ public class PlanificacionService : IPlanificacionService
                     LineaNombre = d.LineaNombre,
                     CeldaCodigo = d.CeldaCodigo,
                     SapPartNumber = d.SapPartNumber,
+                    Descripcion = d.DescripcionParte, // <--- MAPEADO DIRECTO EN MODO COMPONENTE
                     TurnoClave = d.TurnoNombre,
                     Estado = estadoTexto,
                     EstadoCss = estadoCss,

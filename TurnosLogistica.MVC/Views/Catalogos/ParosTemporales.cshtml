@@ -1,0 +1,120 @@
+@model List<TurnosLogistica.MVC.Models.ParoTemporalCatalogoViewModel>
+@{
+    ViewData["Title"] = "Catálogo de Paros Temporales";
+}
+
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+    <div>
+        <div class="page-title" style="font-size:20px; font-weight:700;">Catálogo de Paros Temporales</div>
+        <div class="page-subtitle" style="color:var(--text-muted); font-size:14px;">Administración de motivos temporales predeterminados (Categoría 2)</div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="abrirModalCatalogo(0)">+ Nuevo Paro Temporal</button>
+</div>
+
+<div class="card" style="padding:0">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Motivo / Tipo de Paro</th>
+                    <th>Descripción</th>
+                    <th>Duración Sugerida</th>
+                    <th>Estado</th>
+                    <th style="text-align:center;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var p in Model)
+                    {
+                        <tr>
+                            <td><strong>@p.TipoParo</strong></td>
+                            <td>@p.Descripcion</td>
+                            <td>@p.DuracionMinutos min</td>
+                            <td>
+                                @if (p.Activo)
+                                {
+                                    <span class="badge badge-activo">Activo</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-inactivo">Inactivo</span>
+                                }
+                            </td>
+                            <td style="text-align:center;">
+                                <button class="btn btn-secondary btn-sm" onclick="abrirModalCatalogo(@p.Id, '@p.TipoParo', '@p.Descripcion', @p.DuracionMinutos, @p.Activo.ToString().ToLower())">Editar</button>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" style="padding:24px; text-align:center; color:var(--text-muted);">
+                            No hay paros temporales en el catálogo general.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- MODAL CREAR / EDITAR -->
+<div id="modalCatOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:250; align-items:center; justify-content:center;">
+    <div style="background:var(--surface); border-radius:12px; padding:24px; width:100%; max-width:480px; box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 id="modalCatTitle" style="font-size:16px; font-weight:700; margin:0;">Nuevo Paro Temporal</h3>
+            <button type="button" onclick="cerrarModalCatalogo()" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--text-muted);">&times;</button>
+        </div>
+
+        <form asp-controller="Catalogos" asp-action="GuardarParoTemporal" method="post">
+            <input type="hidden" id="catId" name="id" value="0" />
+
+            <div class="form-group" style="margin-bottom:12px;">
+                <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">TIPO / MOTIVO DEL PARO *</label>
+                <input type="text" id="catTipoParo" name="tipoParo" class="form-control" placeholder="Ej. Junta, Reunión RH..." required style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border);" />
+            </div>
+
+            <div class="form-group" style="margin-bottom:12px;">
+                <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">DESCRIPCIÓN</label>
+                <input type="text" id="catDescripcion" name="descripcion" class="form-control" placeholder="Detalle opcional..." style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border);" />
+            </div>
+
+            <div class="form-group" style="margin-bottom:12px;">
+                <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">DURACIÓN SUGERIDA (MINUTOS) *</label>
+                <input type="number" id="catDuracion" name="duracionMinutos" class="form-control" min="1" value="30" required style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border);" />
+            </div>
+
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:600;">
+                    <input type="checkbox" id="catActivo" name="activo" value="true" checked />
+                    Registro Activo
+                </label>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--border); padding-top:14px;">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModalCatalogo()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function abrirModalCatalogo(id, tipo = '', desc = '', dur = 30, activo = true) {
+            document.getElementById('catId').value = id;
+            document.getElementById('catTipoParo').value = tipo;
+            document.getElementById('catDescripcion').value = desc;
+            document.getElementById('catDuracion').value = dur;
+            document.getElementById('catActivo').checked = activo;
+            document.getElementById('modalCatTitle').innerText = id === 0 ? 'Nuevo Paro Temporal' : 'Editar Paro Temporal';
+            document.getElementById('modalCatOverlay').style.display = 'flex';
+        }
+        function cerrarModalCatalogo() {
+            document.getElementById('modalCatOverlay').style.display = 'none';
+        }
+    </script>
+}

@@ -33,12 +33,12 @@ public class RendimientoController : Controller
         var vm = await ConsultarRendimientoAsync(fecha, turno, linea, plantaId);
         var sb = new StringBuilder();
 
-        // Encabezados CSV (compatible con Excel mediante BOM UTF-8)
-        sb.AppendLine("Turno;Proyecto;Linea;Celda;No. Parte;Estatus;Horas Prog;Paro Prog (min);Paro Falla (min);Total Paro (min);Horas Efectivas;Pzas Prog;Pzas Term;Cumplimiento (%)");
+        // Encabezados CSV actualizados con Paro Temporal
+        sb.AppendLine("Turno;Proyecto;Linea;Celda;No. Parte;Estatus;Horas Prog;Paro Prog (min);Paro Temporal (min);Paro Falla (min);Total Paro (min);Horas Efectivas;Pzas Prog;Pzas Term;Cumplimiento (%)");
 
         foreach (var i in vm.Items)
         {
-            sb.AppendLine($"{i.TurnoClave};{i.ProyectoCodigo};{i.LineaNombre};{i.CeldaCodigo};{i.SapPartNumber};{i.Estatus};{i.HorasProgramadas:N2};{i.MinutosParoProgramados};{i.MinutosParoNoProgramados};{i.TotalMinutosParo};{i.HorasEfectivas:N2};{i.PiezasProgramadas};{i.PiezasTerminadas};{i.CumplimientoPiezasPct}%");
+            sb.AppendLine($"{i.TurnoClave};{i.ProyectoCodigo};{i.LineaNombre};{i.CeldaCodigo};{i.SapPartNumber};{i.Estatus};{i.HorasProgramadas:N2};{i.MinutosParoProgramados};{i.MinutosParoTemporales};{i.MinutosParoNoProgramados};{i.TotalMinutosParo};{i.HorasEfectivas:N2};{i.PiezasProgramadas};{i.PiezasTerminadas};{i.CumplimientoPiezasPct}%");
         }
 
         byte[] buffer = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(sb.ToString())).ToArray();
@@ -52,7 +52,7 @@ public class RendimientoController : Controller
         DateTime fechaFiltro = fecha ?? DateTime.Today;
 
         // Joins directos basados en los modelos de dominio
-        var query = from p in _context.Programaciones.AsNoTracking()
+       var query = from p in _context.Programaciones.AsNoTracking()
                     join t in _context.Turnos.AsNoTracking() on p.TurnoId equals t.Id
                     join np in _context.NumerosDeParte.AsNoTracking() on p.NumeroParteId equals np.Id
                     join l in _context.Lineas.AsNoTracking() on np.LineaId equals l.Id
@@ -64,7 +64,9 @@ public class RendimientoController : Controller
                     select new
                     {
                         p.Id,
-                        p.HorasProgramadas,
+                        p.TurnoId,
+                        // AQUÍ CAMBIAMOS: Usamos la duración oficial del turno (t.DuracionHoras) en lugar de p.HorasProgramadas
+                        HorasProgramadas = t.DuracionHoras, 
                         p.CantidadProgramada,
                         p.PiezasTerminadas,
                         p.Estatus,
@@ -83,11 +85,15 @@ public class RendimientoController : Controller
 
         var resultados = await query.ToListAsync();
         var progIds = resultados.Select(r => r.Id).ToList();
+        var turnoIds = resultados.Select(r => r.TurnoId).Distinct().ToList();
 
-        // Consultar los paros registrados para estas programaciones
+        // Consultar los paros registrados: tanto los de la programación específica como los base del turno
         var paros = await _context.TurnoParos
             .AsNoTracking()
-            .Where(tp => tp.ProgramacionId.HasValue && progIds.Contains(tp.ProgramacionId.Value) && tp.Activo)
+            .Where(tp => tp.Activo && (
+                (tp.ProgramacionId.HasValue && progIds.Contains(tp.ProgramacionId.Value)) || 
+                (tp.TurnoId.HasValue && turnoIds.Contains(tp.TurnoId.Value) && tp.ProgramacionId == null)
+            ))
             .ToListAsync();
 
         var vm = new RendimientoTurnoViewModel
@@ -110,9 +116,16 @@ public class RendimientoController : Controller
 
         foreach (var item in resultados)
         {
+            // Paros específicos de esta programación (Temporales y Fallas)
             var parosProg = paros.Where(tp => tp.ProgramacionId == item.Id).ToList();
-            int minProg = parosProg.Where(tp => tp.EsProgramado).Sum(tp => tp.DuracionMinutos);
-            int minNoProg = parosProg.Where(tp => !tp.EsProgramado).Sum(tp => tp.DuracionMinutos);
+            
+            // Paros base generales configurados para este turno específico (TurnoId)
+            var parosTurnoBase = paros.Where(tp => tp.ProgramacionId == null && tp.TurnoId == item.TurnoId).ToList();
+
+            // Sumatorias exactas por categoría con sintaxis limpia y segura
+            int minProg = parosTurnoBase.Where(tp => tp.CategoriaParo == 1 || (tp.CategoriaParo == 0 && tp.EsProgramado)).Sum(tp => tp.DuracionMinutos);
+            int minTemp = parosProg.Where(tp => tp.CategoriaParo == 2).Sum(tp => tp.DuracionMinutos); 
+            int minNoProg = parosProg.Where(tp => tp.CategoriaParo == 3 || (tp.CategoriaParo == 0 && !tp.EsProgramado)).Sum(tp => tp.DuracionMinutos);
 
             vm.Items.Add(new RendimientoItemViewModel
             {
@@ -123,7 +136,8 @@ public class RendimientoController : Controller
                 CeldaCodigo = item.CeldaCodigo,
                 SapPartNumber = item.SapPartNumber,
                 HorasProgramadas = (double)item.HorasProgramadas,
-                MinutosParoProgramados = minProg,
+                MinutosParoProgramados = minProg, 
+                MinutosParoTemporales = minTemp,
                 MinutosParoNoProgramados = minNoProg,
                 PiezasProgramadas = item.CantidadProgramada,
                 PiezasTerminadas = item.PiezasTerminadas,
@@ -135,7 +149,7 @@ public class RendimientoController : Controller
     }
 
     [HttpPost]
-    [ServiceFilter(typeof(ValidarOperacionPlantaAttribute))] // <-- Candado Multi-Planta
+    [ServiceFilter(typeof(ValidarOperacionPlantaAttribute))]
     public async Task<IActionResult> ActualizarCierre([FromBody] ActualizarCierreDto dto)
     {
         if (dto == null || dto.ProgramacionId <= 0)
